@@ -24,7 +24,7 @@ Bedtime is when kids bring up their day: the first swimming lesson, the wobbly t
 > *"Alexa, make a short story for tonight. Maya had her first swimming lesson today. She was scared to put her face in the water, but she did it! Lesson two is tomorrow."*
 
 A couple of minutes later there's an original picture book starring Maya and her sidekick Pip the baby dragon.
-- It's painted page by page and narrated with **word-by-word read-along highlighting**.
+- It's painted page by page and narrated with **word-by-word read-along highlighting**, with each character's lines in their own voice.
 - The family **chooses what happens next**.
 - It ends on a calm wind-down page, then the screen dims for sleep.
 - Tomorrow's story remembers tonight's. In our demo, the swimming story opens *"just like the night before the dentist"*, calling back to the previous night's episode.
@@ -36,6 +36,7 @@ A couple of minutes later there's an original picture book starring Maya and her
 | ✍️ **Today → tonight's story** | The parent's own words become a gentle, original story at the child's reading level. Worries get a concrete coping idea (a slow breath, asking for help) and are never dismissed. |
 | 🎨 **Illustrated every page** | A consistent watercolor style. Characters are described by appearance (never by name), so the same hero and sidekick show up on every page. Every picture is moderated by Amazon Rekognition before it's kept. |
 | 🎙️ **Narrated read-along** | Amazon Polly narration with word timings. The current word lights up as it's read. |
+| 🎭 **Character voices** | The narrator reads the story, and each character speaks in their own voice (Maya: Ivy, Pip: Kevin, grown-ups get adult voices). Quotes are found by code; Claude Haiku says who speaks each one. If a page doesn't line up, the narrator reads it. |
 | 🧭 **Choose your path** | At the turning point, tap a picture or just say *"the pillow fort!"*, *"the second one"* or *"the other one"*. |
 | ✨ **Word of the night** | One slightly-new word per story. Tap it, or ask what it means. |
 | 🗺️ **A story world that remembers** | Sidekick, places, friends and past episodes carry over between nights. |
@@ -115,7 +116,7 @@ flowchart LR
 | **Amazon Bedrock**: Converse, Claude Haiku 4.5 | Bedtime-suitability review against an explicit rubric. Chosen over Guardrails denied topics after measuring them on 120 dev cases, then verified on 64 held-out cases. | [`src/story/safety.ts`](src/story/safety.ts), [`eval/safety`](eval/safety/README.md) |
 | **Amazon Bedrock**: InvokeModel, Stability SD3.5 Large (us-west-2) | One watercolor per page, painted one at a time with backoff (rate limits) | [`src/story/illustrator.ts`](src/story/illustrator.ts) |
 | **Amazon Rekognition**: `DetectModerationLabels` | Moderates every illustration before it's kept (repaint, then fall back to the previous picture) | [`src/story/safety.ts`](src/story/safety.ts), [`src/story/pipeline.ts`](src/story/pipeline.ts) |
-| **Amazon Polly**: neural `Danielle` + word speech marks | Narration and read-along timings (UTF-8 byte → character offset mapping) | [`src/story/narrator.ts`](src/story/narrator.ts) |
+| **Amazon Polly**: neural `Danielle` + word speech marks | Narration and read-along timings (UTF-8 byte → character offset mapping); character lines in other neural voices, joined with timings shifted by each line's length | [`src/story/narrator.ts`](src/story/narrator.ts), [`src/story/voices.ts`](src/story/voices.ts) |
 | **Amazon EC2 + Amazon CloudFront** | The hosted demo: a t4g.nano instance reachable only from CloudFront, with HTTPS at the edge. Managed via SSM, no SSH. | [`infra/deploy-aws.sh`](infra/deploy-aws.sh) |
 | **Amazon Bedrock** (Claude Haiku 4.5) + **Amazon Polly** | The simulated Alexa+ brain and voice in Countertop | [countertop](https://github.com/PRIEST099/countertop) |
 
