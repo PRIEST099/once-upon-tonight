@@ -1,5 +1,8 @@
 import { config, MCP_PATH } from './config.js';
 
+/** The hosted Countertop (infra/deploy-countertop-aws.sh), already pointed at the demo endpoint. */
+const TRY_IT = process.env.TRY_IT_URL ?? 'https://d3eqnu2zudrdt1.cloudfront.net';
+
 /**
  * The page a person sees in a browser: at `/`, and at the MCP endpoint itself when it's opened without a token
  * (that answer is still the bare 401 Alexa+ expects; only the body is human-readable).
@@ -26,18 +29,19 @@ export function landingPage(opts: { atEndpoint?: boolean } = {}) {
 <h1>🌙 Once Upon Tonight</h1>
 <p>An Alexa+ add-on, built as an MCP server, that turns a child's day into tonight's illustrated, narrated, choose-your-path bedtime story, and remembers the story world for tomorrow night.</p>
 ${note}
-<p><a href="https://youtu.be/Lgh42f-NPUk">Watch the 3-minute demo</a> · <a href="https://github.com/PRIEST099/once-upon-tonight">Code</a> · <a href="https://github.com/PRIEST099/countertop">Countertop simulator</a></p>
+<p><a href="${TRY_IT}"><b>Try it in your browser</b></a> · <a href="https://youtu.be/Lgh42f-NPUk">Watch the 3-minute demo</a> · <a href="https://github.com/PRIEST099/once-upon-tonight">Code</a> · <a href="https://github.com/PRIEST099/countertop">Countertop simulator</a></p>
 
 <h2>MCP endpoint</h2>
 <p><code>${endpoint}</code> (Streamable HTTP, spec 2025-11-25, OAuth 2.1 with PKCE S256)</p>
 ${demo}
 
 <h2>Try it</h2>
-<p><b>Quick check, no AWS account needed.</b> Countertop is an open-source Alexa+ style simulator. Its headless check tests account linking against the published Alexa+ requirements:</p>
+<p><b>Easiest: <a href="${TRY_IT}">${TRY_IT}</a></b>. It's a hosted copy of Countertop, an open-source Alexa+ style simulator, already pointed at this endpoint. Press <b>Link add-on</b>, allow, then type or hold Space and say "Make tonight's story about her first swimming lesson", "Read my bedtime story", or "How did bedtime go last night?".</p>
+<p><b>Quick check from a terminal.</b> Countertop is an open-source Alexa+ style simulator. Its headless check tests account linking against the published Alexa+ requirements:</p>
 <pre>git clone https://github.com/PRIEST099/countertop
 cd countertop && npm install
 npm run check -- ${endpoint}</pre>
-<p><b>The full Echo Show experience.</b> Run <code>npm run dev</code> in Countertop and open <code>http://localhost:5310</code>. Paste the endpoint above, press <b>Link add-on</b> and allow. Then say or type "Make tonight's story about her first swimming lesson", "Read my bedtime story", or "How did bedtime go last night?". Countertop uses Claude on Amazon Bedrock to play Alexa, so this part needs AWS credentials with Bedrock and Polly in us-east-1.</p>
+<p><b>Your own Countertop.</b> Run <code>npm run dev</code> in Countertop and open <code>http://localhost:5310</code>. Paste the endpoint above, press <b>Link add-on</b> and allow. Then say or type "Make tonight's story about her first swimming lesson", "Read my bedtime story", or "How did bedtime go last night?". Countertop uses Claude on Amazon Bedrock to play Alexa, so this part needs AWS credentials with Bedrock and Polly in us-east-1.</p>
 <p><b>Run it yourself.</b> See the <a href="https://github.com/PRIEST099/once-upon-tonight#readme">README</a>. <code>AI_MODE=mock</code> runs the server without any AWS account.</p>
 
 <h2>For MCP clients</h2>
