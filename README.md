@@ -3,7 +3,7 @@
 **An Alexa+ add-on (MCP server) that turns a child's day into tonight's bedtime story: written, illustrated, narrated with read-along highlighting, choose-your-path, and remembered night after night.**
 
 > Built for the **Build, Ship, Shape: Amazon Developer Hackathon** · Alexa+ track · AWS Builder & Open Source mini challenges.
-> 🎬 Demo video: https://youtu.be/Lgh42f-NPUk · 🌐 Live demo endpoint: `https://d29fplx2av89ja.cloudfront.net/mcp` (demo mode, see [below](#try-the-hosted-demo)) · 🧪 Simulator: [**Countertop**](https://github.com/PRIEST099/countertop) (open source)
+> 🎬 Demo video: https://youtu.be/Lgh42f-NPUk · ▶️ Try it in your browser: **https://d3eqnu2zudrdt1.cloudfront.net** · 🌐 Live demo endpoint: `https://d29fplx2av89ja.cloudfront.net/mcp` (demo mode, see [below](#try-the-hosted-demo)) · 🧪 Simulator: [**Countertop**](https://github.com/PRIEST099/countertop) (open source)
 
 ![Once Upon Tonight on an Echo Show (Countertop simulator)](docs/img/storybook.jpg)
 
@@ -126,9 +126,11 @@ Each story stores an itemized cost estimate at list prices ([`src/story/cost.ts`
 `https://d29fplx2av89ja.cloudfront.net/mcp` runs on AWS in **demo mode** (`AI_MODE=mock`):
 - Anyone can link the demo family (**parent@example.com / bedtime**).
 - Every reading tool works.
-- "Make tonight's story" replays the bundled demo story ("The Morning of the Missing Tooth") instead of calling paid models.
+- "Make tonight's story" replays a bundled demo story instead of calling paid models.
 
-Point [Countertop](https://github.com/PRIEST099/countertop) at it (paste the URL, then **Link add-on**), or run Countertop's headless check:
+**Easiest: open https://d3eqnu2zudrdt1.cloudfront.net.** That's a hosted copy of [Countertop](https://github.com/PRIEST099/countertop), already pointed at this endpoint. Press **Link add-on**, allow, then type or hold Space and say "Make tonight's story about her first swimming lesson", "Read my bedtime story" or "How did bedtime go last night?". The hosted Countertop has a shared daily usage limit to keep costs down.
+
+You can also point your own Countertop at the endpoint (paste the URL, then **Link add-on**), or run its headless check:
 
 ```bash
 cd countertop && npm run check -- https://d29fplx2av89ja.cloudfront.net/mcp
