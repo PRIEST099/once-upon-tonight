@@ -1,0 +1,1996 @@
+{
+  "id": "story_8db34481b363",
+  "familyId": "fam_rivera",
+  "childId": "child_maya",
+  "createdAt": "2026-10-21T08:49:55.966Z",
+  "status": "ready",
+  "progress": {
+    "step": "Tonight's story is ready: “The Morning of the Missing Tooth”",
+    "done": 17,
+    "total": 17,
+    "log": [
+      "Writing a story about Maya's day",
+      "“The Morning of the Missing Tooth” is written. Checking it's just right for bedtime",
+      "Painting 6 illustrations",
+      "Recording the narration",
+      "Tonight's story is ready: “The Morning of the Missing Tooth”"
+    ]
+  },
+  "request": {
+    "todaysMoments": "Maya lost her first wobbly tooth at lunch today and is a little nervous about her first dentist visit tomorrow morning.",
+    "theme": "bravery",
+    "length": "short"
+  },
+  "pages": [
+    {
+      "id": "p1",
+      "text": "Maya ran her tongue over the little gap where her tooth used to be. Tomorrow was dentist day, and her tummy felt full of butterflies. \"I remember feeling fluttery before,\" she said. \"Last time, I took a slow breath and it helped.\" She breathed in… and out. A little better already.",
+      "illustrationPrompt": "A five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, sits cross-legged on a cozy bed, eyes gently closed, taking a calm breath. A tiny round sky-blue dragon with stubby wings, a pale yellow belly and big friendly eyes sits beside her, mirroring the slow breath with a tiny puffed chest. Soft warm lamplight, peaceful bedroom, quiet and reassuring mood.",
+      "audioUrl": "p1.mp3",
+      "marks": [
+        {
+          "time": 25,
+          "start": 0,
+          "end": 4,
+          "value": "Maya"
+        },
+        {
+          "time": 375,
+          "start": 5,
+          "end": 8,
+          "value": "ran"
+        },
+        {
+          "time": 625,
+          "start": 9,
+          "end": 12,
+          "value": "her"
+        },
+        {
+          "time": 762,
+          "start": 13,
+          "end": 19,
+          "value": "tongue"
+        },
+        {
+          "time": 1112,
+          "start": 20,
+          "end": 24,
+          "value": "over"
+        },
+        {
+          "time": 1337,
+          "start": 25,
+          "end": 28,
+          "value": "the"
+        },
+        {
+          "time": 1437,
+          "start": 29,
+          "end": 35,
+          "value": "little"
+        },
+        {
+          "time": 1675,
+          "start": 36,
+          "end": 39,
+          "value": "gap"
+        },
+        {
+          "time": 2000,
+          "start": 40,
+          "end": 45,
+          "value": "where"
+        },
+        {
+          "time": 2175,
+          "start": 46,
+          "end": 49,
+          "value": "her"
+        },
+        {
+          "time": 2312,
+          "start": 50,
+          "end": 55,
+          "value": "tooth"
+        },
+        {
+          "time": 2662,
+          "start": 56,
+          "end": 60,
+          "value": "used"
+        },
+        {
+          "time": 2962,
+          "start": 61,
+          "end": 63,
+          "value": "to"
+        },
+        {
+          "time": 3037,
+          "start": 64,
+          "end": 66,
+          "value": "be"
+        },
+        {
+          "time": 3880,
+          "start": 68,
+          "end": 76,
+          "value": "Tomorrow"
+        },
+        {
+          "time": 4367,
+          "start": 77,
+          "end": 80,
+          "value": "was"
+        },
+        {
+          "time": 4592,
+          "start": 81,
+          "end": 88,
+          "value": "dentist"
+        },
+        {
+          "time": 5105,
+          "start": 89,
+          "end": 92,
+          "value": "day"
+        },
+        {
+          "time": 5592,
+          "start": 94,
+          "end": 97,
+          "value": "and"
+        },
+        {
+          "time": 5730,
+          "start": 98,
+          "end": 101,
+          "value": "her"
+        },
+        {
+          "time": 5867,
+          "start": 102,
+          "end": 107,
+          "value": "tummy"
+        },
+        {
+          "time": 6217,
+          "start": 108,
+          "end": 112,
+          "value": "felt"
+        },
+        {
+          "time": 6505,
+          "start": 113,
+          "end": 117,
+          "value": "full"
+        },
+        {
+          "time": 6780,
+          "start": 118,
+          "end": 120,
+          "value": "of"
+        },
+        {
+          "time": 6880,
+          "start": 121,
+          "end": 132,
+          "value": "butterflies"
+        },
+        {
+          "time": 8147,
+          "start": 135,
+          "end": 136,
+          "value": "I"
+        },
+        {
+          "time": 8285,
+          "start": 137,
+          "end": 145,
+          "value": "remember"
+        },
+        {
+          "time": 8722,
+          "start": 146,
+          "end": 153,
+          "value": "feeling"
+        },
+        {
+          "time": 9135,
+          "start": 154,
+          "end": 162,
+          "value": "fluttery"
+        },
+        {
+          "time": 9510,
+          "start": 163,
+          "end": 169,
+          "value": "before"
+        },
+        {
+          "time": 10147,
+          "start": 172,
+          "end": 175,
+          "value": "she"
+        },
+        {
+          "time": 10322,
+          "start": 176,
+          "end": 180,
+          "value": "said"
+        },
+        {
+          "time": 11240,
+          "start": 183,
+          "end": 187,
+          "value": "Last"
+        },
+        {
+          "time": 11540,
+          "start": 188,
+          "end": 192,
+          "value": "time"
+        },
+        {
+          "time": 12015,
+          "start": 194,
+          "end": 195,
+          "value": "I"
+        },
+        {
+          "time": 12127,
+          "start": 196,
+          "end": 200,
+          "value": "took"
+        },
+        {
+          "time": 12352,
+          "start": 201,
+          "end": 202,
+          "value": "a"
+        },
+        {
+          "time": 12402,
+          "start": 203,
+          "end": 207,
+          "value": "slow"
+        },
+        {
+          "time": 12715,
+          "start": 208,
+          "end": 214,
+          "value": "breath"
+        },
+        {
+          "time": 13102,
+          "start": 215,
+          "end": 218,
+          "value": "and"
+        },
+        {
+          "time": 13252,
+          "start": 219,
+          "end": 221,
+          "value": "it"
+        },
+        {
+          "time": 13340,
+          "start": 222,
+          "end": 228,
+          "value": "helped"
+        },
+        {
+          "time": 14345,
+          "start": 231,
+          "end": 234,
+          "value": "She"
+        },
+        {
+          "time": 14545,
+          "start": 235,
+          "end": 243,
+          "value": "breathed"
+        },
+        {
+          "time": 14957,
+          "start": 244,
+          "end": 246,
+          "value": "in"
+        },
+        {
+          "time": 15750,
+          "start": 248,
+          "end": 251,
+          "value": "and"
+        },
+        {
+          "time": 15925,
+          "start": 252,
+          "end": 255,
+          "value": "out"
+        },
+        {
+          "time": 16705,
+          "start": 257,
+          "end": 258,
+          "value": "A"
+        },
+        {
+          "time": 16792,
+          "start": 259,
+          "end": 265,
+          "value": "little"
+        },
+        {
+          "time": 17042,
+          "start": 266,
+          "end": 272,
+          "value": "better"
+        },
+        {
+          "time": 17330,
+          "start": 273,
+          "end": 280,
+          "value": "already"
+        }
+      ],
+      "imageUrl": "p1.jpg"
+    },
+    {
+      "id": "p2",
+      "text": "Pip let out a small hiccup. Golden sparkles floated up like tiny stars. \"You already did the brave thing once,\" Pip said. \"That makes you luminous — that means glowing on the inside.\" Maya giggled. \"Then let's glow a little more tonight!\"",
+      "illustrationPrompt": "A tiny round sky-blue dragon with stubby wings, a pale yellow belly and big friendly eyes hiccupping cheerful golden sparkles from its nose, floating upward like tiny stars. A five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, laughs with delight, her hands cupped to catch a sparkle. Cozy bedroom, warm golden light, joyful and magical mood.",
+      "audioUrl": "p2.mp3",
+      "marks": [
+        {
+          "time": 25,
+          "start": 0,
+          "end": 3,
+          "value": "Pip"
+        },
+        {
+          "time": 287,
+          "start": 4,
+          "end": 7,
+          "value": "let"
+        },
+        {
+          "time": 462,
+          "start": 8,
+          "end": 11,
+          "value": "out"
+        },
+        {
+          "time": 637,
+          "start": 12,
+          "end": 13,
+          "value": "a"
+        },
+        {
+          "time": 687,
+          "start": 14,
+          "end": 19,
+          "value": "small"
+        },
+        {
+          "time": 1075,
+          "start": 20,
+          "end": 26,
+          "value": "hiccup"
+        },
+        {
+          "time": 2017,
+          "start": 28,
+          "end": 34,
+          "value": "Golden"
+        },
+        {
+          "time": 2417,
+          "start": 35,
+          "end": 43,
+          "value": "sparkles"
+        },
+        {
+          "time": 2992,
+          "start": 44,
+          "end": 51,
+          "value": "floated"
+        },
+        {
+          "time": 3342,
+          "start": 52,
+          "end": 54,
+          "value": "up"
+        },
+        {
+          "time": 3505,
+          "start": 55,
+          "end": 59,
+          "value": "like"
+        },
+        {
+          "time": 3692,
+          "start": 60,
+          "end": 64,
+          "value": "tiny"
+        },
+        {
+          "time": 4030,
+          "start": 65,
+          "end": 70,
+          "value": "stars"
+        },
+        {
+          "time": 5210,
+          "start": 73,
+          "end": 76,
+          "value": "You"
+        },
+        {
+          "time": 5385,
+          "start": 77,
+          "end": 84,
+          "value": "already"
+        },
+        {
+          "time": 5810,
+          "start": 85,
+          "end": 88,
+          "value": "did"
+        },
+        {
+          "time": 5985,
+          "start": 89,
+          "end": 92,
+          "value": "the"
+        },
+        {
+          "time": 6060,
+          "start": 93,
+          "end": 98,
+          "value": "brave"
+        },
+        {
+          "time": 6397,
+          "start": 99,
+          "end": 104,
+          "value": "thing"
+        },
+        {
+          "time": 6660,
+          "start": 105,
+          "end": 109,
+          "value": "once"
+        },
+        {
+          "time": 7260,
+          "start": 112,
+          "end": 115,
+          "value": "Pip"
+        },
+        {
+          "time": 7460,
+          "start": 116,
+          "end": 120,
+          "value": "said"
+        },
+        {
+          "time": 8327,
+          "start": 123,
+          "end": 127,
+          "value": "That"
+        },
+        {
+          "time": 8565,
+          "start": 128,
+          "end": 133,
+          "value": "makes"
+        },
+        {
+          "time": 8877,
+          "start": 134,
+          "end": 137,
+          "value": "you"
+        },
+        {
+          "time": 8965,
+          "start": 138,
+          "end": 146,
+          "value": "luminous"
+        },
+        {
+          "time": 9740,
+          "start": 149,
+          "end": 153,
+          "value": "that"
+        },
+        {
+          "time": 9902,
+          "start": 154,
+          "end": 159,
+          "value": "means"
+        },
+        {
+          "time": 10202,
+          "start": 160,
+          "end": 167,
+          "value": "glowing"
+        },
+        {
+          "time": 10540,
+          "start": 168,
+          "end": 170,
+          "value": "on"
+        },
+        {
+          "time": 10702,
+          "start": 171,
+          "end": 174,
+          "value": "the"
+        },
+        {
+          "time": 10840,
+          "start": 175,
+          "end": 181,
+          "value": "inside"
+        },
+        {
+          "time": 11577,
+          "start": 184,
+          "end": 188,
+          "value": "Maya"
+        },
+        {
+          "time": 11865,
+          "start": 189,
+          "end": 196,
+          "value": "giggled"
+        },
+        {
+          "time": 12795,
+          "start": 199,
+          "end": 203,
+          "value": "Then"
+        },
+        {
+          "time": 13007,
+          "start": 204,
+          "end": 209,
+          "value": "let's"
+        },
+        {
+          "time": 13282,
+          "start": 210,
+          "end": 214,
+          "value": "glow"
+        },
+        {
+          "time": 13520,
+          "start": 215,
+          "end": 216,
+          "value": "a"
+        },
+        {
+          "time": 13595,
+          "start": 217,
+          "end": 223,
+          "value": "little"
+        },
+        {
+          "time": 13832,
+          "start": 224,
+          "end": 228,
+          "value": "more"
+        },
+        {
+          "time": 14057,
+          "start": 229,
+          "end": 236,
+          "value": "tonight"
+        }
+      ],
+      "imageUrl": "p2.jpg"
+    }
+  ],
+  "playback": {
+    "pageIndex": 0,
+    "wordsExplored": [],
+    "pagesHeard": 0
+  },
+  "title": "The Morning of the Missing Tooth",
+  "dedication": "For Maya, who was brave enough to smile with a gap today.",
+  "choice": {
+    "question": "Where should Maya and Pip go to feel brave tonight — up to Moonberry Hill to talk to the moon, or into the Pillow Fort to practice for tomorrow?",
+    "options": [
+      {
+        "id": "a",
+        "label": "Climb Moonberry Hill",
+        "pages": [
+          {
+            "id": "a1",
+            "text": "Maya and Pip tiptoed up Moonberry Hill. The big round moon hung low and friendly, like it was leaning in to listen. \"I have a gap in my smile,\" Maya told the moon. \"And tomorrow a dentist will peek inside.\" The moon seemed to glow a little warmer, as if to say: I see you, and you are just right.",
+            "illustrationPrompt": "A five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, stands at the top of a gentle grassy hill at night, looking up at a large warm full moon in a star-filled sky. A tiny round sky-blue dragon with stubby wings and a pale yellow belly stands close beside her, both gazing upward with wonder. Soft moonlight washes the hill in silver and gold, calm and magical.",
+            "audioUrl": "a1.mp3",
+            "marks": [
+              {
+                "time": 25,
+                "start": 0,
+                "end": 4,
+                "value": "Maya"
+              },
+              {
+                "time": 487,
+                "start": 5,
+                "end": 8,
+                "value": "and"
+              },
+              {
+                "time": 687,
+                "start": 9,
+                "end": 12,
+                "value": "Pip"
+              },
+              {
+                "time": 925,
+                "start": 13,
+                "end": 20,
+                "value": "tiptoed"
+              },
+              {
+                "time": 1450,
+                "start": 21,
+                "end": 23,
+                "value": "up"
+              },
+              {
+                "time": 1625,
+                "start": 24,
+                "end": 33,
+                "value": "Moonberry"
+              },
+              {
+                "time": 2162,
+                "start": 34,
+                "end": 38,
+                "value": "Hill"
+              },
+              {
+                "time": 3080,
+                "start": 40,
+                "end": 43,
+                "value": "The"
+              },
+              {
+                "time": 3167,
+                "start": 44,
+                "end": 47,
+                "value": "big"
+              },
+              {
+                "time": 3442,
+                "start": 48,
+                "end": 53,
+                "value": "round"
+              },
+              {
+                "time": 3755,
+                "start": 54,
+                "end": 58,
+                "value": "moon"
+              },
+              {
+                "time": 3967,
+                "start": 59,
+                "end": 63,
+                "value": "hung"
+              },
+              {
+                "time": 4242,
+                "start": 64,
+                "end": 67,
+                "value": "low"
+              },
+              {
+                "time": 4492,
+                "start": 68,
+                "end": 71,
+                "value": "and"
+              },
+              {
+                "time": 4605,
+                "start": 72,
+                "end": 80,
+                "value": "friendly"
+              },
+              {
+                "time": 5305,
+                "start": 82,
+                "end": 86,
+                "value": "like"
+              },
+              {
+                "time": 5517,
+                "start": 87,
+                "end": 89,
+                "value": "it"
+              },
+              {
+                "time": 5617,
+                "start": 90,
+                "end": 93,
+                "value": "was"
+              },
+              {
+                "time": 5805,
+                "start": 94,
+                "end": 101,
+                "value": "leaning"
+              },
+              {
+                "time": 6167,
+                "start": 102,
+                "end": 104,
+                "value": "in"
+              },
+              {
+                "time": 6330,
+                "start": 105,
+                "end": 107,
+                "value": "to"
+              },
+              {
+                "time": 6455,
+                "start": 108,
+                "end": 114,
+                "value": "listen"
+              },
+              {
+                "time": 7397,
+                "start": 117,
+                "end": 118,
+                "value": "I"
+              },
+              {
+                "time": 7510,
+                "start": 119,
+                "end": 123,
+                "value": "have"
+              },
+              {
+                "time": 7685,
+                "start": 124,
+                "end": 125,
+                "value": "a"
+              },
+              {
+                "time": 7747,
+                "start": 126,
+                "end": 129,
+                "value": "gap"
+              },
+              {
+                "time": 8010,
+                "start": 130,
+                "end": 132,
+                "value": "in"
+              },
+              {
+                "time": 8097,
+                "start": 133,
+                "end": 135,
+                "value": "my"
+              },
+              {
+                "time": 8247,
+                "start": 136,
+                "end": 141,
+                "value": "smile"
+              },
+              {
+                "time": 8922,
+                "start": 144,
+                "end": 148,
+                "value": "Maya"
+              },
+              {
+                "time": 9210,
+                "start": 149,
+                "end": 153,
+                "value": "told"
+              },
+              {
+                "time": 9485,
+                "start": 154,
+                "end": 157,
+                "value": "the"
+              },
+              {
+                "time": 9560,
+                "start": 158,
+                "end": 162,
+                "value": "moon"
+              },
+              {
+                "time": 10502,
+                "start": 165,
+                "end": 168,
+                "value": "And"
+              },
+              {
+                "time": 10677,
+                "start": 169,
+                "end": 177,
+                "value": "tomorrow"
+              },
+              {
+                "time": 11127,
+                "start": 178,
+                "end": 179,
+                "value": "a"
+              },
+              {
+                "time": 11190,
+                "start": 180,
+                "end": 187,
+                "value": "dentist"
+              },
+              {
+                "time": 11690,
+                "start": 188,
+                "end": 192,
+                "value": "will"
+              },
+              {
+                "time": 11790,
+                "start": 193,
+                "end": 197,
+                "value": "peek"
+              },
+              {
+                "time": 12065,
+                "start": 198,
+                "end": 204,
+                "value": "inside"
+              },
+              {
+                "time": 13182,
+                "start": 207,
+                "end": 210,
+                "value": "The"
+              },
+              {
+                "time": 13257,
+                "start": 211,
+                "end": 215,
+                "value": "moon"
+              },
+              {
+                "time": 13545,
+                "start": 216,
+                "end": 222,
+                "value": "seemed"
+              },
+              {
+                "time": 13820,
+                "start": 223,
+                "end": 225,
+                "value": "to"
+              },
+              {
+                "time": 13907,
+                "start": 226,
+                "end": 230,
+                "value": "glow"
+              },
+              {
+                "time": 14220,
+                "start": 231,
+                "end": 232,
+                "value": "a"
+              },
+              {
+                "time": 14282,
+                "start": 233,
+                "end": 239,
+                "value": "little"
+              },
+              {
+                "time": 14545,
+                "start": 240,
+                "end": 246,
+                "value": "warmer"
+              },
+              {
+                "time": 15270,
+                "start": 248,
+                "end": 250,
+                "value": "as"
+              },
+              {
+                "time": 15445,
+                "start": 251,
+                "end": 253,
+                "value": "if"
+              },
+              {
+                "time": 15582,
+                "start": 254,
+                "end": 256,
+                "value": "to"
+              },
+              {
+                "time": 15695,
+                "start": 257,
+                "end": 260,
+                "value": "say"
+              },
+              {
+                "time": 16232,
+                "start": 262,
+                "end": 263,
+                "value": "I"
+              },
+              {
+                "time": 16395,
+                "start": 264,
+                "end": 267,
+                "value": "see"
+              },
+              {
+                "time": 16670,
+                "start": 268,
+                "end": 271,
+                "value": "you"
+              },
+              {
+                "time": 17132,
+                "start": 273,
+                "end": 276,
+                "value": "and"
+              },
+              {
+                "time": 17295,
+                "start": 277,
+                "end": 280,
+                "value": "you"
+              },
+              {
+                "time": 17420,
+                "start": 281,
+                "end": 284,
+                "value": "are"
+              },
+              {
+                "time": 17507,
+                "start": 285,
+                "end": 289,
+                "value": "just"
+              },
+              {
+                "time": 17832,
+                "start": 290,
+                "end": 295,
+                "value": "right"
+              }
+            ],
+            "imageUrl": "a1.jpg"
+          },
+          {
+            "id": "a2",
+            "text": "Pip curled up small and warm against Maya's side. \"The moon has seen every brave child who ever grew a new tooth,\" Pip whispered. Maya yawned a wide, gap-toothed yawn. The stars winked slowly, one by one. Tomorrow felt smaller now — soft and easy and fine. Goodnight, Maya. Sleep tight under all those friendly stars.",
+            "illustrationPrompt": "A five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, lies back on the soft grassy top of a gentle moonlit hill, eyes drowsy and closing. A tiny round sky-blue dragon with stubby wings and a pale yellow belly is curled up snugly against her side, eyes half-shut. The full moon glows overhead, stars scattered wide, the scene deeply peaceful, warm, and sleepy.",
+            "audioUrl": "a2.mp3",
+            "marks": [
+              {
+                "time": 25,
+                "start": 0,
+                "end": 3,
+                "value": "Pip"
+              },
+              {
+                "time": 237,
+                "start": 4,
+                "end": 10,
+                "value": "curled"
+              },
+              {
+                "time": 575,
+                "start": 11,
+                "end": 13,
+                "value": "up"
+              },
+              {
+                "time": 737,
+                "start": 14,
+                "end": 19,
+                "value": "small"
+              },
+              {
+                "time": 1200,
+                "start": 20,
+                "end": 23,
+                "value": "and"
+              },
+              {
+                "time": 1387,
+                "start": 24,
+                "end": 28,
+                "value": "warm"
+              },
+              {
+                "time": 1675,
+                "start": 29,
+                "end": 36,
+                "value": "against"
+              },
+              {
+                "time": 2037,
+                "start": 37,
+                "end": 43,
+                "value": "Maya's"
+              },
+              {
+                "time": 2375,
+                "start": 44,
+                "end": 48,
+                "value": "side"
+              },
+              {
+                "time": 3380,
+                "start": 51,
+                "end": 54,
+                "value": "The"
+              },
+              {
+                "time": 3455,
+                "start": 55,
+                "end": 59,
+                "value": "moon"
+              },
+              {
+                "time": 3755,
+                "start": 60,
+                "end": 63,
+                "value": "has"
+              },
+              {
+                "time": 3917,
+                "start": 64,
+                "end": 68,
+                "value": "seen"
+              },
+              {
+                "time": 4280,
+                "start": 69,
+                "end": 74,
+                "value": "every"
+              },
+              {
+                "time": 4542,
+                "start": 75,
+                "end": 80,
+                "value": "brave"
+              },
+              {
+                "time": 4942,
+                "start": 81,
+                "end": 86,
+                "value": "child"
+              },
+              {
+                "time": 5317,
+                "start": 87,
+                "end": 90,
+                "value": "who"
+              },
+              {
+                "time": 5505,
+                "start": 91,
+                "end": 95,
+                "value": "ever"
+              },
+              {
+                "time": 5755,
+                "start": 96,
+                "end": 100,
+                "value": "grew"
+              },
+              {
+                "time": 6005,
+                "start": 101,
+                "end": 102,
+                "value": "a"
+              },
+              {
+                "time": 6042,
+                "start": 103,
+                "end": 106,
+                "value": "new"
+              },
+              {
+                "time": 6267,
+                "start": 107,
+                "end": 112,
+                "value": "tooth"
+              },
+              {
+                "time": 6817,
+                "start": 115,
+                "end": 118,
+                "value": "Pip"
+              },
+              {
+                "time": 7042,
+                "start": 119,
+                "end": 128,
+                "value": "whispered"
+              },
+              {
+                "time": 7997,
+                "start": 130,
+                "end": 134,
+                "value": "Maya"
+              },
+              {
+                "time": 8310,
+                "start": 135,
+                "end": 141,
+                "value": "yawned"
+              },
+              {
+                "time": 8660,
+                "start": 142,
+                "end": 143,
+                "value": "a"
+              },
+              {
+                "time": 8735,
+                "start": 144,
+                "end": 148,
+                "value": "wide"
+              },
+              {
+                "time": 9360,
+                "start": 150,
+                "end": 161,
+                "value": "gap-toothed"
+              },
+              {
+                "time": 9985,
+                "start": 162,
+                "end": 166,
+                "value": "yawn"
+              },
+              {
+                "time": 10940,
+                "start": 168,
+                "end": 171,
+                "value": "The"
+              },
+              {
+                "time": 11015,
+                "start": 172,
+                "end": 177,
+                "value": "stars"
+              },
+              {
+                "time": 11477,
+                "start": 178,
+                "end": 184,
+                "value": "winked"
+              },
+              {
+                "time": 11727,
+                "start": 185,
+                "end": 191,
+                "value": "slowly"
+              },
+              {
+                "time": 12490,
+                "start": 193,
+                "end": 196,
+                "value": "one"
+              },
+              {
+                "time": 12765,
+                "start": 197,
+                "end": 199,
+                "value": "by"
+              },
+              {
+                "time": 12915,
+                "start": 200,
+                "end": 203,
+                "value": "one"
+              },
+              {
+                "time": 13845,
+                "start": 205,
+                "end": 213,
+                "value": "Tomorrow"
+              },
+              {
+                "time": 14345,
+                "start": 214,
+                "end": 218,
+                "value": "felt"
+              },
+              {
+                "time": 14657,
+                "start": 219,
+                "end": 226,
+                "value": "smaller"
+              },
+              {
+                "time": 15120,
+                "start": 227,
+                "end": 230,
+                "value": "now"
+              },
+              {
+                "time": 15632,
+                "start": 233,
+                "end": 237,
+                "value": "soft"
+              },
+              {
+                "time": 16057,
+                "start": 238,
+                "end": 241,
+                "value": "and"
+              },
+              {
+                "time": 16207,
+                "start": 242,
+                "end": 246,
+                "value": "easy"
+              },
+              {
+                "time": 16607,
+                "start": 247,
+                "end": 250,
+                "value": "and"
+              },
+              {
+                "time": 16757,
+                "start": 251,
+                "end": 255,
+                "value": "fine"
+              },
+              {
+                "time": 17725,
+                "start": 257,
+                "end": 266,
+                "value": "Goodnight"
+              },
+              {
+                "time": 18312,
+                "start": 268,
+                "end": 272,
+                "value": "Maya"
+              },
+              {
+                "time": 19255,
+                "start": 274,
+                "end": 279,
+                "value": "Sleep"
+              },
+              {
+                "time": 19617,
+                "start": 280,
+                "end": 285,
+                "value": "tight"
+              },
+              {
+                "time": 19905,
+                "start": 286,
+                "end": 291,
+                "value": "under"
+              },
+              {
+                "time": 20205,
+                "start": 292,
+                "end": 295,
+                "value": "all"
+              },
+              {
+                "time": 20455,
+                "start": 296,
+                "end": 301,
+                "value": "those"
+              },
+              {
+                "time": 20730,
+                "start": 302,
+                "end": 310,
+                "value": "friendly"
+              },
+              {
+                "time": 21067,
+                "start": 311,
+                "end": 316,
+                "value": "stars"
+              }
+            ],
+            "imageUrl": "a2.jpg"
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "label": "Build the Pillow Fort",
+        "pages": [
+          {
+            "id": "b1",
+            "text": "Maya and Pip dove into the Pillow Fort and stacked every cushion high. \"Let's practice,\" said Maya. She opened her mouth wide. \"Ahhh!\" Pip peeked inside with a pretend tiny flashlight made of one golden sparkle. \"Looks wonderful in there!\" Pip declared. \"One very excellent gap, right on schedule.\" Maya burst into giggles.",
+            "illustrationPrompt": "Inside a magnificent cozy cave built from cushions, pillows and blankets, lit by a soft crescent moon nightlight, a five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, leans back laughing with her mouth open wide. A tiny round sky-blue dragon with stubby wings and a pale yellow belly peers in close, holding up one glowing golden sparkle like a tiny flashlight, expression earnest and funny. Warm, snug, playful mood.",
+            "audioUrl": "b1.mp3",
+            "marks": [
+              {
+                "time": 25,
+                "start": 0,
+                "end": 4,
+                "value": "Maya"
+              },
+              {
+                "time": 450,
+                "start": 5,
+                "end": 8,
+                "value": "and"
+              },
+              {
+                "time": 625,
+                "start": 9,
+                "end": 12,
+                "value": "Pip"
+              },
+              {
+                "time": 887,
+                "start": 13,
+                "end": 17,
+                "value": "dove"
+              },
+              {
+                "time": 1212,
+                "start": 18,
+                "end": 22,
+                "value": "into"
+              },
+              {
+                "time": 1425,
+                "start": 23,
+                "end": 26,
+                "value": "the"
+              },
+              {
+                "time": 1512,
+                "start": 27,
+                "end": 33,
+                "value": "Pillow"
+              },
+              {
+                "time": 1875,
+                "start": 34,
+                "end": 38,
+                "value": "Fort"
+              },
+              {
+                "time": 2237,
+                "start": 39,
+                "end": 42,
+                "value": "and"
+              },
+              {
+                "time": 2400,
+                "start": 43,
+                "end": 50,
+                "value": "stacked"
+              },
+              {
+                "time": 2787,
+                "start": 51,
+                "end": 56,
+                "value": "every"
+              },
+              {
+                "time": 3050,
+                "start": 57,
+                "end": 64,
+                "value": "cushion"
+              },
+              {
+                "time": 3450,
+                "start": 65,
+                "end": 69,
+                "value": "high"
+              },
+              {
+                "time": 4330,
+                "start": 72,
+                "end": 77,
+                "value": "Let's"
+              },
+              {
+                "time": 4617,
+                "start": 78,
+                "end": 86,
+                "value": "practice"
+              },
+              {
+                "time": 5342,
+                "start": 89,
+                "end": 93,
+                "value": "said"
+              },
+              {
+                "time": 5555,
+                "start": 94,
+                "end": 98,
+                "value": "Maya"
+              },
+              {
+                "time": 6472,
+                "start": 100,
+                "end": 103,
+                "value": "She"
+              },
+              {
+                "time": 6710,
+                "start": 104,
+                "end": 110,
+                "value": "opened"
+              },
+              {
+                "time": 7035,
+                "start": 111,
+                "end": 114,
+                "value": "her"
+              },
+              {
+                "time": 7160,
+                "start": 115,
+                "end": 120,
+                "value": "mouth"
+              },
+              {
+                "time": 7485,
+                "start": 121,
+                "end": 125,
+                "value": "wide"
+              },
+              {
+                "time": 8377,
+                "start": 128,
+                "end": 132,
+                "value": "Ahhh"
+              },
+              {
+                "time": 9107,
+                "start": 135,
+                "end": 138,
+                "value": "Pip"
+              },
+              {
+                "time": 9345,
+                "start": 139,
+                "end": 145,
+                "value": "peeked"
+              },
+              {
+                "time": 9670,
+                "start": 146,
+                "end": 152,
+                "value": "inside"
+              },
+              {
+                "time": 10295,
+                "start": 153,
+                "end": 157,
+                "value": "with"
+              },
+              {
+                "time": 10482,
+                "start": 158,
+                "end": 159,
+                "value": "a"
+              },
+              {
+                "time": 10532,
+                "start": 160,
+                "end": 167,
+                "value": "pretend"
+              },
+              {
+                "time": 11020,
+                "start": 168,
+                "end": 172,
+                "value": "tiny"
+              },
+              {
+                "time": 11345,
+                "start": 173,
+                "end": 183,
+                "value": "flashlight"
+              },
+              {
+                "time": 11995,
+                "start": 184,
+                "end": 188,
+                "value": "made"
+              },
+              {
+                "time": 12257,
+                "start": 189,
+                "end": 191,
+                "value": "of"
+              },
+              {
+                "time": 12395,
+                "start": 192,
+                "end": 195,
+                "value": "one"
+              },
+              {
+                "time": 12682,
+                "start": 196,
+                "end": 202,
+                "value": "golden"
+              },
+              {
+                "time": 13070,
+                "start": 203,
+                "end": 210,
+                "value": "sparkle"
+              },
+              {
+                "time": 14225,
+                "start": 213,
+                "end": 218,
+                "value": "Looks"
+              },
+              {
+                "time": 14525,
+                "start": 219,
+                "end": 228,
+                "value": "wonderful"
+              },
+              {
+                "time": 15012,
+                "start": 229,
+                "end": 231,
+                "value": "in"
+              },
+              {
+                "time": 15175,
+                "start": 232,
+                "end": 237,
+                "value": "there"
+              },
+              {
+                "time": 15700,
+                "start": 240,
+                "end": 243,
+                "value": "Pip"
+              },
+              {
+                "time": 15925,
+                "start": 244,
+                "end": 252,
+                "value": "declared"
+              },
+              {
+                "time": 16955,
+                "start": 255,
+                "end": 258,
+                "value": "One"
+              },
+              {
+                "time": 17192,
+                "start": 259,
+                "end": 263,
+                "value": "very"
+              },
+              {
+                "time": 17517,
+                "start": 264,
+                "end": 273,
+                "value": "excellent"
+              },
+              {
+                "time": 17967,
+                "start": 274,
+                "end": 277,
+                "value": "gap"
+              },
+              {
+                "time": 18467,
+                "start": 279,
+                "end": 284,
+                "value": "right"
+              },
+              {
+                "time": 18667,
+                "start": 285,
+                "end": 287,
+                "value": "on"
+              },
+              {
+                "time": 18805,
+                "start": 288,
+                "end": 296,
+                "value": "schedule"
+              },
+              {
+                "time": 19822,
+                "start": 299,
+                "end": 303,
+                "value": "Maya"
+              },
+              {
+                "time": 20147,
+                "start": 304,
+                "end": 309,
+                "value": "burst"
+              },
+              {
+                "time": 20547,
+                "start": 310,
+                "end": 314,
+                "value": "into"
+              },
+              {
+                "time": 20772,
+                "start": 315,
+                "end": 322,
+                "value": "giggles"
+              }
+            ],
+            "imageUrl": "b1.jpg"
+          },
+          {
+            "id": "b2",
+            "text": "They flopped back on the softest pillow. \"Now you know exactly what to do,\" Pip said. \"Open wide, breathe slow, and be luminous.\" Maya nodded, already half asleep. The crescent nightlight glowed its gentlest glow. Tomorrow was just a short sleep away — and she was already so brave. Goodnight, Maya. You've got this.",
+            "illustrationPrompt": "Inside a cozy pillow fort glowing with a crescent moon nightlight, a five-year-old Black girl with curly dark hair in two puffs, wearing yellow star pajamas, lies nestled deep in soft pillows and blankets, eyes peacefully closed. A tiny round sky-blue dragon with stubby wings and a pale yellow belly is tucked in beside her, one small wing draped gently over her arm. The light is dim and golden, the mood utterly warm and sleepy.",
+            "audioUrl": "b2.mp3",
+            "marks": [
+              {
+                "time": 25,
+                "start": 0,
+                "end": 4,
+                "value": "They"
+              },
+              {
+                "time": 150,
+                "start": 5,
+                "end": 12,
+                "value": "flopped"
+              },
+              {
+                "time": 525,
+                "start": 13,
+                "end": 17,
+                "value": "back"
+              },
+              {
+                "time": 837,
+                "start": 18,
+                "end": 20,
+                "value": "on"
+              },
+              {
+                "time": 950,
+                "start": 21,
+                "end": 24,
+                "value": "the"
+              },
+              {
+                "time": 1025,
+                "start": 25,
+                "end": 32,
+                "value": "softest"
+              },
+              {
+                "time": 1550,
+                "start": 33,
+                "end": 39,
+                "value": "pillow"
+              },
+              {
+                "time": 2467,
+                "start": 42,
+                "end": 45,
+                "value": "Now"
+              },
+              {
+                "time": 2655,
+                "start": 46,
+                "end": 49,
+                "value": "you"
+              },
+              {
+                "time": 2792,
+                "start": 50,
+                "end": 54,
+                "value": "know"
+              },
+              {
+                "time": 2967,
+                "start": 55,
+                "end": 62,
+                "value": "exactly"
+              },
+              {
+                "time": 3467,
+                "start": 63,
+                "end": 67,
+                "value": "what"
+              },
+              {
+                "time": 3667,
+                "start": 68,
+                "end": 70,
+                "value": "to"
+              },
+              {
+                "time": 3780,
+                "start": 71,
+                "end": 73,
+                "value": "do"
+              },
+              {
+                "time": 4242,
+                "start": 76,
+                "end": 79,
+                "value": "Pip"
+              },
+              {
+                "time": 4442,
+                "start": 80,
+                "end": 84,
+                "value": "said"
+              },
+              {
+                "time": 5322,
+                "start": 87,
+                "end": 91,
+                "value": "Open"
+              },
+              {
+                "time": 5660,
+                "start": 92,
+                "end": 96,
+                "value": "wide"
+              },
+              {
+                "time": 6247,
+                "start": 98,
+                "end": 105,
+                "value": "breathe"
+              },
+              {
+                "time": 6535,
+                "start": 106,
+                "end": 110,
+                "value": "slow"
+              },
+              {
+                "time": 7147,
+                "start": 112,
+                "end": 115,
+                "value": "and"
+              },
+              {
+                "time": 7297,
+                "start": 116,
+                "end": 118,
+                "value": "be"
+              },
+              {
+                "time": 7410,
+                "start": 119,
+                "end": 127,
+                "value": "luminous"
+              },
+              {
+                "time": 8565,
+                "start": 130,
+                "end": 134,
+                "value": "Maya"
+              },
+              {
+                "time": 8902,
+                "start": 135,
+                "end": 141,
+                "value": "nodded"
+              },
+              {
+                "time": 9527,
+                "start": 143,
+                "end": 150,
+                "value": "already"
+              },
+              {
+                "time": 9940,
+                "start": 151,
+                "end": 155,
+                "value": "half"
+              },
+              {
+                "time": 10265,
+                "start": 156,
+                "end": 162,
+                "value": "asleep"
+              },
+              {
+                "time": 11170,
+                "start": 164,
+                "end": 167,
+                "value": "The"
+              },
+              {
+                "time": 11245,
+                "start": 168,
+                "end": 176,
+                "value": "crescent"
+              },
+              {
+                "time": 11695,
+                "start": 177,
+                "end": 187,
+                "value": "nightlight"
+              },
+              {
+                "time": 12120,
+                "start": 188,
+                "end": 194,
+                "value": "glowed"
+              },
+              {
+                "time": 12432,
+                "start": 195,
+                "end": 198,
+                "value": "its"
+              },
+              {
+                "time": 12620,
+                "start": 199,
+                "end": 207,
+                "value": "gentlest"
+              },
+              {
+                "time": 13132,
+                "start": 208,
+                "end": 212,
+                "value": "glow"
+              },
+              {
+                "time": 14012,
+                "start": 214,
+                "end": 222,
+                "value": "Tomorrow"
+              },
+              {
+                "time": 14462,
+                "start": 223,
+                "end": 226,
+                "value": "was"
+              },
+              {
+                "time": 14675,
+                "start": 227,
+                "end": 231,
+                "value": "just"
+              },
+              {
+                "time": 14937,
+                "start": 232,
+                "end": 233,
+                "value": "a"
+              },
+              {
+                "time": 14975,
+                "start": 234,
+                "end": 239,
+                "value": "short"
+              },
+              {
+                "time": 15337,
+                "start": 240,
+                "end": 245,
+                "value": "sleep"
+              },
+              {
+                "time": 15650,
+                "start": 246,
+                "end": 250,
+                "value": "away"
+              },
+              {
+                "time": 16187,
+                "start": 253,
+                "end": 256,
+                "value": "and"
+              },
+              {
+                "time": 16312,
+                "start": 257,
+                "end": 260,
+                "value": "she"
+              },
+              {
+                "time": 16487,
+                "start": 261,
+                "end": 264,
+                "value": "was"
+              },
+              {
+                "time": 16662,
+                "start": 265,
+                "end": 272,
+                "value": "already"
+              },
+              {
+                "time": 17062,
+                "start": 273,
+                "end": 275,
+                "value": "so"
+              },
+              {
+                "time": 17325,
+                "start": 276,
+                "end": 281,
+                "value": "brave"
+              },
+              {
+                "time": 18317,
+                "start": 283,
+                "end": 292,
+                "value": "Goodnight"
+              },
+              {
+                "time": 18905,
+                "start": 294,
+                "end": 298,
+                "value": "Maya"
+              },
+              {
+                "time": 19847,
+                "start": 300,
+                "end": 306,
+                "value": "You've"
+              },
+              {
+                "time": 20072,
+                "start": 307,
+                "end": 310,
+                "value": "got"
+              },
+              {
+                "time": 20310,
+                "start": 311,
+                "end": 315,
+                "value": "this"
+              }
+            ],
+            "imageUrl": "b2.jpg"
+          }
+        ]
+      }
+    ],
+    "questionAudioUrl": "choice.mp3"
+  },
+  "wordOfTheNight": {
+    "word": "luminous",
+    "meaning": "Luminous means glowing with a beautiful, warm light — even on the inside.",
+    "example": "When you smiled after being kind to someone, your whole face looked luminous.",
+    "audioUrl": "word.mp3"
+  },
+  "episodeSummary": "The night before her first dentist visit, Maya felt nervous about her new tooth gap. She and Pip practiced a slow breath to calm the butterflies, then either climbed Moonberry Hill to share her worry with the moon or played pretend dentist in the Pillow Fort until bravery felt easy and the worry shrank away to nothing.",
+  "newCharacters": [],
+  "newPlaces": [],
+  "safety": {
+    "checked": true,
+    "provider": "author prompt + avoid-list"
+  }
+}

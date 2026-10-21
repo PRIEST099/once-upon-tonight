@@ -1,0 +1,40 @@
+{
+  "name": "once-upon-tonight",
+  "version": "0.1.0",
+  "description": "An Alexa+ MCP add-on that turns your child's day into tonight's illustrated, narrated bedtime story — and keeps the story world going night after night.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run build:app && tsx watch src/server.ts",
+    "start": "npm run build:app && tsx src/server.ts",
+    "build:app": "vite build --config app/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke-test.ts",
+    "check-aws": "tsx scripts/check-aws.ts",
+    "export-seed": "tsx scripts/export-seed.ts",
+    "create-guardrail": "tsx scripts/create-guardrail.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.1154.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1154.0",
+    "@aws-sdk/client-polly": "^3.1154.0",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/ext-apps": "^2.0.3",
+    "@modelcontextprotocol/node": "^2.1.1",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}

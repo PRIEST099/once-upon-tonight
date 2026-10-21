@@ -1,0 +1,46 @@
+{
+  "manifestVersion": "1.0",
+  "storeListing": {
+    "distributionCountries": ["US"],
+    "locales": {
+      "en-US": {
+        "default": "DEFAULT",
+        "name": { "value": "Once Upon Tonight" },
+        "shortDescription": "Turn today into tonight's bedtime story: illustrated, narrated, and remembered night after night.",
+        "fullDescription": "Once Upon Tonight is a bedtime routine for parents. Tell Alexa what happened today, like a lost tooth, a first day at school, or a worry about tomorrow, and Once Upon Tonight writes a calm, original picture-book story starring your family's own hero and their sidekick. It paints every page, narrates it with word-by-word read-along highlighting on Echo Show, and lets your family choose what happens next. Each story remembers the last, so friends and places come back night after night. Parents link their account, set a nickname and the topics stories should never mention, and can delete everything at any time. Stories are checked by a bedtime-content safety guardrail before they are ever shown.",
+        "examplePhrases": [
+          "Ask Once Upon Tonight to make tonight's story about the zoo trip",
+          "Open Once Upon Tonight and read the bedtime story",
+          "Ask Once Upon Tonight how bedtime went last night"
+        ],
+        "privacyAndCompliance": {
+          "privacyPolicyUrl": "https://REPLACE-WITH-PUBLIC-HOST/privacy",
+          "termsOfUseUrl": "https://REPLACE-WITH-PUBLIC-HOST/terms"
+        },
+        "mediaAssets": {
+          "icons": {
+            "light": [
+              { "size": "72x72", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-72.png" },
+              { "size": "64x64", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-64.png" },
+              { "size": "88x88", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-88.png" },
+              { "size": "126x126", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-126.png" },
+              { "size": "180x180", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-180.png" },
+              { "size": "241x241", "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/icon-241.png" }
+            ],
+            "dark": []
+          },
+          "carouselImages": [
+            { "uri": "https://REPLACE-WITH-PUBLIC-HOST/brand/carousel-1.jpg", "altText": "A watercolor storybook page: a girl in star pajamas and a tiny blue dragon under the moon", "size": "600x900" }
+          ],
+          "bannerImages": []
+        }
+      }
+    }
+  },
+  "integrations": [
+    {
+      "type": "MCP",
+      "config": { "endpoints": { "default": { "type": "HTTPS", "uri": "https://REPLACE-WITH-PUBLIC-HOST/mcp" } } }
+    }
+  ]
+}
