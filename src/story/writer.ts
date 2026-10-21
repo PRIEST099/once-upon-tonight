@@ -178,6 +178,10 @@ async function writeOnce(child: Child, req: StoryRequest): Promise<StoryDraft> {
   const draft = toolUse.input as unknown as StoryDraft;
   draft.sharedPages = unstring(draft.sharedPages);
   draft.choice = unstring(draft.choice);
+  if (typeof draft.choice === 'string' || typeof draft.sharedPages === 'string') {
+    // Seen with deep schemas: a nested object arrives as a JSON string with unescaped quotes.
+    throw new Error('The author returned a nested field as malformed JSON');
+  }
   if (draft.choice) draft.choice.options = unstring(draft.choice.options)?.map((o) => ({ ...o, pages: unstring(o.pages) }));
   draft.wordOfTheNight = unstring(draft.wordOfTheNight);
   draft.newCharacters = unstring(draft.newCharacters) ?? [];
