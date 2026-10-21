@@ -785,8 +785,15 @@ export function createMcpServer(familyId: string) {
         changes.push(`${a.remove_avoid_topic} is allowed again`);
       }
       if (a.add_character_name) {
-        child.world.recurringCharacters.push({ name: a.add_character_name, description: a.add_character_description ?? `${a.add_character_name}, a kind friend` });
-        changes.push(`${a.add_character_name} will appear in future stories`);
+        // Asking twice updates the character rather than adding a second Grandma Rose.
+        const known = child.world.recurringCharacters.find((c) => c.name.toLowerCase() === a.add_character_name!.toLowerCase());
+        if (known) {
+          if (a.add_character_description) known.description = a.add_character_description;
+          changes.push(`${known.name} is already in the story world${a.add_character_description ? ', with the description updated' : ''}`);
+        } else {
+          child.world.recurringCharacters.push({ name: a.add_character_name, description: a.add_character_description ?? `${a.add_character_name}, a kind friend` });
+          changes.push(`${a.add_character_name} will appear in future stories`);
+        }
       }
       if (a.rename_sidekick) {
         changes.push(`${child.world.sidekick.name} is now called ${a.rename_sidekick}`);

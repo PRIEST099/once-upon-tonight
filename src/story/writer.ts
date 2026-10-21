@@ -85,7 +85,7 @@ const storySchema = {
         required: ['name', 'description'],
       },
     },
-    newPlaces: { type: 'array', items: { type: 'string' } },
+    newPlaces: { type: 'array', items: { type: 'string' }, description: 'Imaginary story-world places introduced tonight that could return in later episodes (not real-world places like a school or a pool). Often empty.' },
   },
   required: ['title', 'dedication', 'sharedPages', 'choice', 'wordOfTheNight', 'episodeSummary', 'newCharacters', 'newPlaces'],
 };
@@ -101,6 +101,8 @@ export function buildAuthorPrompt(child: Child, req: StoryRequest) {
   const branch = req.length === 'short' ? 2 : 3;
   const w = child.world;
   const recent = w.episodes.slice(-3);
+  // A new word every night: the series is also a small vocabulary builder.
+  const usedWords = [...new Set(w.episodes.map((e) => e.wordOfTheNight).filter(Boolean))].slice(-30);
 
   const system = `You are the author of "Once Upon Tonight", a nightly bedtime-story series written for one specific child.
 Write warm, calm, funny-in-a-gentle-way stories that a parent would be glad to have read to their child at bedtime.
@@ -112,7 +114,7 @@ Rules:
 - Reading level (${child.readingLevel}, age ${child.age}): ${levelGuide[child.readingLevel]}
 - Structure: exactly ${shared} shared pages, then a choice between two different, equally lovely paths, then exactly ${branch} pages for each path. Both paths must end well.
 - The last page of each path is a wind-down: slower, sleepy imagery (quiet, warm, cozy), ending by saying goodnight to ${child.name} by name.
-- Use the word of the night verbatim exactly once in the shared pages.
+- Use the word of the night verbatim exactly once in the shared pages.${usedWords.length ? ` Pick a new word: not ${usedWords.map((x) => `"${x}"`).join(', ')}.` : ''}
 - Continuity: this is one episode in an ongoing series. ${recent.length ? 'Briefly and naturally call back to one earlier episode.' : 'This is the first episode.'}
 Return the story only by calling the write_story tool.`;
 

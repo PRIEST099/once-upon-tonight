@@ -58,6 +58,11 @@ const lib = await call('story_library', {});
 const ids = (lib.structuredContent?.stories ?? []).map((s: any) => s.storyId);
 check('story deleted mid-generation stays deleted', !ids.includes(fresh.structuredContent?.storyId), `library: ${ids.length} stories`);
 
+const add = () => call('update_story_world', { add_character_name: 'Grandma Rose', add_character_description: 'silver curls, grows strawberries' });
+await add();
+const again = await add();
+check('adding the same character twice does not duplicate', /already in the story world/.test(JSON.stringify(again.structuredContent?.changes)), JSON.stringify(again.structuredContent?.changes));
+
 await client.close();
 console.log(failed ? `\n${failed} check(s) failed` : '\nAll regression checks passed.');
 process.exit(failed ? 1 : 0);
