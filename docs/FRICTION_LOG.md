@@ -14,7 +14,7 @@ Severity scale: **Blocker** (couldn't proceed as designed) · **High** (hours lo
 - **Actual:** A blank page reading "Coming Soon". The MCP Toolkit quickstart, the simulator page and the CLI reference don't say the tools are partner-only; only the add-ons home page and the hackathon FAQ do.
 - **Severity:** Blocker (for the official path)
 - **Workaround:** Built our own spec-faithful simulator ([Countertop](../../countertop)); the hackathon FAQ confirms this is accepted.
-- **Suggestion:** Put a "Private preview — select partners" banner on every MCP Toolkit page and in the console itself. Even better, give hackathon participants a time-boxed simulator allowlist.
+- **Suggestion:** Put a "Private preview: select partners only" banner on every MCP Toolkit page and in the console itself. Even better, give hackathon participants a time-boxed simulator allowlist.
 
 ### 2. `alexa-ai` on public npm is an unrelated third-party package
 - **Task:** Install the Alexa AI CLI mentioned in the quickstart (`alexa-ai configure`, `alexa-ai deploy`).
@@ -128,7 +128,7 @@ Severity scale: **Blocker** (couldn't proceed as designed) · **High** (hours lo
 - **Task:** Get CLI credentials quickly (new `aws login` command).
 - **Steps:** `aws login --region us-east-1` opened the browser sign-in.
 - **Expected:** Sign in, then return to the terminal with credentials.
-- **Actual:** "400 Bad Request — You may have typed the address incorrectly or you may have used an outdated link. Please clear your cookies…" Re-running produced the same thing.
+- **Actual:** "400 Bad Request. You may have typed the address incorrectly or you may have used an outdated link. Please clear your cookies…" Re-running produced the same thing.
 - **Severity:** Medium (it blocked the first 30 minutes for a first-time AWS developer)
 - **Workaround:** `aws login --remote` (cross-device code flow) worked first time.
 - **Suggestion:** Detect the failing case and tell the user to try `--remote`, or a private window.
