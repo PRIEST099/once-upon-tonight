@@ -530,7 +530,8 @@ export function createMcpServer(familyId: string) {
       const { story, child, problem } = resolveStory(familyId, story_id, hero);
       if (!story || !child) return fail(problem!);
       const finished = stepAt(story, story.playback.pageIndex).kind === 'end';
-      if (start_over || finished) {
+      // The public demo family is shared by every visitor, so opening the book always starts at page 1 there.
+      if (start_over || finished || config.demoMode) {
         story.playback = { pageIndex: 0, wordsExplored: [], pagesHeard: 0 };
         voiceChunkStart.delete(story.id);
       }
