@@ -1,6 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { config, resourceUrl, MCP_PATH } from './config.js';
+import { isBrowserVisit, landingPage } from './landing.js';
 import * as store from './store.js';
 import type { OAuthClient } from './types.js';
 
@@ -338,6 +339,8 @@ export function requireMcpAuth(req: Request, res: Response, next: NextFunction) 
     if (!config.alexaStrict401) {
       res.set('WWW-Authenticate', `Bearer resource_metadata="${config.publicUrl}/.well-known/oauth-protected-resource${MCP_PATH}"`);
     }
+    // Someone opened the endpoint in a browser: same bare 401, with a page that explains how to try the add-on.
+    if (isBrowserVisit(req.method, req.headers.accept, header)) return res.status(401).type('html').send(landingPage({ atEndpoint: true }));
     return res.status(401).json({ error: 'invalid_token', error_description: bearer ? 'Token is invalid or expired' : 'Authorization required' });
   }
   (req as any).auth = {

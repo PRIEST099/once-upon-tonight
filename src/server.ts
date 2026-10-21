@@ -5,6 +5,7 @@ import { loadDb } from './store.js';
 import { authRouter, ensureBuiltInClients, requireMcpAuth } from './auth.js';
 import { createMcpServer, loadAppBundle, watchAppBundle } from './mcp.js';
 import { mediaDir } from './media.js';
+import { landingPage } from './landing.js';
 
 if (config.publicUrl.startsWith('https:') && (!config.alexaClientSecret || config.alexaClientSecret === DEFAULT_ALEXA_CLIENT_SECRET)) {
   console.error(
@@ -88,14 +89,7 @@ app.get(MCP_PATH, requireMcpAuth, (_req, res) => res.status(405).set('Allow', 'P
 app.delete(MCP_PATH, (_req, res) => res.status(405).set('Allow', 'POST').end());
 
 app.get('/', (_req, res) => {
-  res.type('html').send(`<!doctype html><meta charset="utf-8"><title>Once Upon Tonight</title>
-<body style="font-family:system-ui;max-width:640px;margin:48px auto;padding:0 16px;line-height:1.6">
-<h1>🌙 Once Upon Tonight</h1>
-<p>An Alexa+ MCP add-on that turns a child's day into tonight's illustrated, narrated bedtime story.</p>
-<ul><li>MCP endpoint (Streamable HTTP): <code>${config.publicUrl}${MCP_PATH}</code></li>
-<li>Protected resource metadata: <a href="/.well-known/oauth-protected-resource">/.well-known/oauth-protected-resource</a></li>
-<li>Authorization server metadata: <a href="/.well-known/oauth-authorization-server">/.well-known/oauth-authorization-server</a></li></ul>
-<p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p></body>`);
+  res.type('html').send(landingPage());
 });
 app.get('/privacy', (_req, res) =>
   res.type('text').send(
