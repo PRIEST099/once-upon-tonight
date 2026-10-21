@@ -1,5 +1,7 @@
 import { ConverseCommand, type ToolInputSchema } from '@aws-sdk/client-bedrock-runtime';
 import { bedrock } from './aws.js';
+import { recordTokens } from './cost.js';
+import { withRetry } from './retry.js';
 import { config } from '../config.js';
 import type { Child, StoryRequest } from '../types.js';
 
@@ -140,14 +142,9 @@ function unstring<T>(v: T | string): T {
   }
 }
 
-export async function writeStory(child: Child, req: StoryRequest, attempt = 1): Promise<StoryDraft> {
-  try {
-    return await writeOnce(child, req);
-  } catch (err) {
-    if (attempt >= 2 || /guardrail/i.test(String(err))) throw err;
-    console.warn(`[writer] attempt ${attempt} failed (${(err as Error).message}); retrying`);
-    return writeStory(child, req, attempt + 1);
-  }
+/** A malformed draft gets one more try; a throttled one waits and tries again. */
+export function writeStory(child: Child, req: StoryRequest): Promise<StoryDraft> {
+  return withRetry(() => writeOnce(child, req));
 }
 
 async function writeOnce(child: Child, req: StoryRequest): Promise<StoryDraft> {
@@ -172,7 +169,7 @@ async function writeOnce(child: Child, req: StoryRequest): Promise<StoryDraft> {
       },
     }),
   );
-  if (res.stopReason === 'guardrail_intervened') throw new Error('The safety guardrail blocked this story. Try different details.');
+  recordTokens(config.textModelId, res.usage);
   const toolUse = res.output?.message?.content?.find((c) => c.toolUse)?.toolUse;
   if (!toolUse?.input) throw new Error('The author model did not return a story');
   const draft = toolUse.input as unknown as StoryDraft;

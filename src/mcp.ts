@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/server';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
@@ -8,7 +8,7 @@ import { config } from './config.js';
 import * as store from './store.js';
 import { createStory } from './story/pipeline.js';
 import { rebaseMediaUrl } from './media.js';
-import type { Child, Page, Story } from './types.js';
+import type { Child, Page, ReadingLevel, Story } from './types.js';
 
 // ---- the MCP App (one self-contained HTML bundle, content-hashed URI so hosts can cache it) ----
 
@@ -33,6 +33,20 @@ export function watchAppBundle() {
 
 const VIEW_KEY = 'once-upon-tonight/view';
 const THEMES = ['bravery', 'kindness', 'friendship', 'trying something new', 'calming big feelings', 'family', 'gratitude', 'adventure'] as const;
+
+/** Cost guard: new stories a family can start per rolling 24 h (re-reading is always free). */
+const MAX_STORIES_PER_DAY = Number(process.env.MAX_STORIES_PER_DAY) > 0 ? Math.floor(Number(process.env.MAX_STORIES_PER_DAY)) : 5;
+const DAY_MS = 24 * 60 * 60_000;
+/** A repeat of the same request within this window returns the story already made from it. */
+const SAME_REQUEST_MS = 10 * 60_000;
+/** A pipeline still "in progress" after this long died with a restart; don't let it block new stories. */
+const STALE_PIPELINE_MS = 15 * 60_000;
+const normalizeMoments = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 
 type View =
   | { view: 'studio'; story: ReturnType<typeof studioData> }
@@ -82,6 +96,8 @@ function studioData(s: Story, child: Child) {
     total: s.progress.total,
     error: s.error,
     preview: s.pages.filter((p) => p.imageUrl).slice(0, 3).map((p) => rebaseMediaUrl(p.imageUrl)),
+    cost: s.cost,
+    generationMs: s.generationMs,
   };
 }
 
@@ -149,23 +165,167 @@ function stepAt(s: Story, pos: number): { kind: 'page'; page: Page; number: numb
   const m = branch?.pages.length ?? s.choice?.options[0].pages.length ?? 0;
   const total = k + m;
   if (pos < k) return { kind: 'page', page: s.pages[pos], number: pos + 1, total };
+  if (!s.choice) return { kind: 'end' };
   if (pos === k) return { kind: 'choice' };
   if (!branch) return { kind: 'choice' };
   if (pos - k - 1 < branch.pages.length) return { kind: 'page', page: branch.pages[pos - k - 1], number: pos, total };
   return { kind: 'end' };
 }
 
+const choicePrompt = (s: Story) => `${s.choice!.question} Say “${s.choice!.options[0].label}” or “${s.choice!.options[1].label}”.`;
+const choiceFacts = (s: Story) => ({ awaitingChoice: true, question: s.choice!.question, options: s.choice!.options.map((o) => o.label) });
+
+/** Screen mode: the storybook narrates the page itself, so say only a short cue; the page text stays in the facts. */
 function describeStep(s: Story, child: Child, pos: number) {
   const step = stepAt(s, pos);
-  if (step.kind === 'page') return { say: step.page.text, facts: { page: step.number, of: step.total, text: step.page.text } };
-  if (step.kind === 'choice') {
-    const [a, b] = s.choice!.options;
-    return {
-      say: `${s.choice!.question} Say “${a.label}” or “${b.label}”.`,
-      facts: { awaitingChoice: true, question: s.choice!.question, options: [a.label, b.label] },
-    };
-  }
+  if (step.kind === 'page') return { say: `Page ${step.number}.`, facts: { page: step.number, of: step.total, text: step.page.text } };
+  if (step.kind === 'choice') return { say: choicePrompt(s), facts: choiceFacts(s) };
   return { say: `The end. Goodnight, ${child.name}.`, facts: { finished: true } };
+}
+
+// ---- voice-first reading (devices without a screen) ---------------------------------------------
+// The reply itself reads the story: consecutive pages up to ~120 words, stopping early at the choice
+// or the end, then one short cue. playback.pageIndex then points at the first page not yet read.
+
+const VOICE_WORDS = 120;
+const readModeInput = z
+  .enum(['screen', 'voice'])
+  .optional()
+  .describe(
+    "'screen' (default): the device shows the storybook, which narrates every page itself, so say only the short cue returned. " +
+      "'voice': the device has no screen; the returned text reads the next pages aloud and ends with a short question.",
+  );
+
+/** Where the most recent voice chunk that read any pages began, per story, so "read that again" repeats all of it. */
+const voiceChunkStart = new Map<string, { from: number; onePage: boolean }>();
+
+const wordCount = (t: string) => t.split(/\s+/).filter(Boolean).length;
+
+function readAloud(s: Story, child: Child, from: number, onePage = false) {
+  const texts: string[] = [];
+  const pages: number[] = [];
+  let words = 0;
+  let pos = from;
+  let cue: { say: string; facts: Record<string, unknown> };
+  for (;;) {
+    const step = stepAt(s, pos);
+    if (step.kind === 'page') {
+      const n = wordCount(step.page.text);
+      if (texts.length && (onePage || words + n > VOICE_WORDS)) {
+        cue = { say: 'Shall I keep going?', facts: { more: true } };
+        break;
+      }
+      texts.push(step.page.text);
+      pages.push(step.number);
+      words += n;
+      pos++;
+    } else if (step.kind === 'choice' && s.playback.branch) {
+      pos++; // already chosen: carry straight on down that path
+    } else {
+      cue = step.kind === 'choice' ? { say: choicePrompt(s), facts: choiceFacts(s) } : { say: `The end. Goodnight, ${child.name}.`, facts: { finished: true } };
+      break;
+    }
+  }
+  const branch = s.choice?.options.find((o) => o.id === s.playback.branch) ?? s.choice?.options[0];
+  return {
+    say: [...texts, cue.say].join(' '),
+    next: pos,
+    pages,
+    facts: { readMode: 'voice', narratedOnScreen: false, pagesRead: pages, of: s.pages.length + (branch?.pages.length ?? 0), ...cue.facts },
+  };
+}
+
+/** Read a voice chunk starting at `from` and move the reading position past it. */
+function voiceRead(s: Story, child: Child, from: number, onePage = false) {
+  const r = readAloud(s, child, from, onePage);
+  const k = s.pages.length;
+  if (r.pages.length) voiceChunkStart.set(s.id, { from, onePage }); // a bare re-ask ("Shall I…", the question) isn't a chunk
+  s.playback.pageIndex = r.next;
+  s.playback.pagesHeard = Math.max(s.playback.pagesHeard, r.next > k ? r.next - 1 : r.next);
+  if (stepAt(s, r.next).kind === 'end') s.playback.finishedAt ??= new Date().toISOString();
+  store.putStory(s);
+  return r;
+}
+
+/** The page before `pos` for "go back", stepping over a choice that has already been made. */
+function pageBefore(s: Story, pos: number) {
+  const k = s.pages.length;
+  const p = pos - 1 === k && s.playback.branch ? k - 1 : pos - 1;
+  return Math.max(0, p);
+}
+
+// ---- choice resolution -------------------------------------------------------------------------
+// Order: explicit option_number → words matching a label → ordinal words → ask again. A bare "one"
+// never counts as "first" ("the pillow fort one", "the other one").
+
+const CHOICE_FILLER = new Set(['the', 'a', 'an', 'to', 'in', 'of', 'and', 'one', 'lets', 'let', 'go', 'i', 'want', 'please', 'do', 'on', 'at', 'with', 'it', 'that', 'this', 'we', 'is', 'pick', 'choose']);
+const choiceWords = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+const sameWord = (x: string, y: string) =>
+  x === y || x === `${y}s` || y === `${x}s` || (Math.min(x.length, y.length) >= 4 && (x.startsWith(y) || y.startsWith(x)));
+
+/** Map the child's words (or an explicit 1/2) to option index 0 or 1; undefined means ask again. */
+export function resolveChoice(labels: [string, string], choice = '', optionNumber?: number): 0 | 1 | undefined {
+  if (optionNumber === 1 || optionNumber === 2) return optionNumber === 1 ? 0 : 1;
+  const raw = choiceWords(choice);
+  const said = raw.filter((w) => !CHOICE_FILLER.has(w));
+  // A lone position word ("first", "the second one") means a position, even if a label contains it.
+  if (said.length === 1 && /^(first|1|left)$/.test(said[0])) return 0;
+  if (said.length === 1 && /^(second|2|two|other|last|right)$/.test(said[0])) return 1;
+  const pick = (i: 0 | 1, _alone: boolean): 0 | 1 => i;
+
+  // Label words: more matching words wins; on a tie, a label the child said in full beats one they only touched.
+  const match = labels.map((label) => {
+    const want = [...new Set(choiceWords(label).filter((w) => !CHOICE_FILLER.has(w)))];
+    const hits = want.filter((w) => said.some((s) => sameWord(s, w))).length;
+    return { hits, full: hits > 0 && hits === want.length };
+  });
+  const [a, b] = match;
+  if (a.hits !== b.hits) return pick(a.hits > b.hits ? 0 : 1, Math.min(a.hits, b.hits) === 0);
+  if (a.hits && a.full !== b.full) return a.full ? 0 : 1;
+
+  // Ordinals; if both kinds are said ("not the first, the second"), the last one mentioned wins.
+  const text = ` ${raw.join(' ')} `;
+  const lastAt = (re: RegExp) => Math.max(-1, ...[...text.matchAll(re)].map((m) => m.index!));
+  const first = Math.max(lastAt(/ (first|1|left)(?= )/g), lastAt(/ (option|choice|number|path|plan) (one|a)(?= )/g), text === ' a ' ? 0 : -1);
+  const second = lastAt(/ (second|two|2|other|last|right|b)(?= )/g);
+  if (first < 0 && second < 0) return undefined;
+  return pick(second > first ? 1 : 0, first < 0 || second < 0);
+}
+
+// ---- forget_story_world confirmation (server-enforced, not just a model promise) -----------------
+
+const FORGET_TTL_MS = 5 * 60_000;
+const forgetTokens = new Map<string, { familyId: string; childId: string; expiresAt: number }>();
+
+function issueForgetToken(familyId: string, childId: string) {
+  const now = Date.now();
+  for (const [t, v] of forgetTokens) if (v.expiresAt <= now || (v.familyId === familyId && v.childId === childId)) forgetTokens.delete(t);
+  const token = randomBytes(12).toString('base64url');
+  forgetTokens.set(token, { familyId, childId, expiresAt: now + FORGET_TTL_MS });
+  return token;
+}
+
+/** Single use: a token is spent whether or not it matches. */
+function redeemForgetToken(token: string | undefined, familyId: string, childId: string) {
+  const t = token ? forgetTokens.get(token) : undefined;
+  if (!t) return false;
+  forgetTokens.delete(token!);
+  return t.familyId === familyId && t.childId === childId && t.expiresAt > Date.now();
+}
+
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const READING_LEVEL_SAY: Record<ReadingLevel, string> = { 'pre-reader': 'a pre-reader', 'early-reader': 'an early reader', 'independent-reader': 'an independent reader' };
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+function listOf(items: string[], max = 3) {
+  const shown = items.slice(0, max);
+  if (items.length > max) shown.push(`${items.length - max} more`);
+  return shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : (shown[0] ?? '');
 }
 
 function resolveStory(familyId: string, storyId?: string, hero?: string): { story?: Story; child?: Child; problem?: string } {
@@ -233,8 +393,9 @@ export function createMcpServer(familyId: string) {
       description:
         "Start making tonight's bedtime story from what happened in the child's day. Use when a parent says things like " +
         '"make tonight\'s story about the zoo trip", "Maya lost her first tooth today, make a story about it", or ' +
-        '"she\'s nervous about the dentist tomorrow". Writing, illustrating and narrating takes about a minute and runs in the background; ' +
-        'reply that it will be ready by bedtime. Pass everything the parent said about the day in todays_moments.',
+        '"she\'s nervous about the dentist tomorrow". Writing, illustrating and narrating takes a couple of minutes and runs in the background; ' +
+        'reply that it will be ready by bedtime. Pass everything the parent said about the day in todays_moments. ' +
+        'Safe to repeat: if a story for this child is already being made, or the same request was made in the last few minutes, that story is returned instead of a new one.',
       inputSchema: z.object({
         todays_moments: z
           .string()
@@ -251,12 +412,58 @@ export function createMcpServer(familyId: string) {
     async ({ todays_moments, theme, length, hero }) => {
       const child = store.resolveChild(familyId, hero);
       if (!child) return fail(hero ? `I don't have a story hero named ${hero}.` : 'No story hero is set up yet.');
+      const now = Date.now();
+      const age = (s: Story) => now - Date.parse(s.createdAt);
+      const studio = { invoking: 'Opening the story studio…', invoked: 'Story studio' };
+
+      // One story at a time per child: a second "make tonight's story" returns the one in the studio.
+      const theirs = store.storiesFor(child.id);
+      const making = theirs.find((s) => s.status !== 'ready' && s.status !== 'failed' && age(s) < STALE_PIPELINE_MS);
+      if (making) {
+        const step = making.progress.step.charAt(0).toLowerCase() + making.progress.step.slice(1);
+        return reply(
+          `I'm already making a story for ${child.name}: ${step}. It will be ready in a couple of minutes.`,
+          { storyId: making.id, hero: child.name, status: making.status, alreadyInProgress: true, newStoryStarted: false },
+          { view: 'studio', story: studioData(making, child) },
+          studio,
+        );
+      }
+
+      // The same request again (a retry, or the parent repeating themselves) gets the story already made from it.
+      const said = normalizeMoments(todays_moments);
+      const repeat = theirs.find((s) => s.status !== 'failed' && age(s) < SAME_REQUEST_MS && normalizeMoments(s.request.todaysMoments) === said);
+      if (repeat) {
+        return reply(
+          repeat.status === 'ready'
+            ? `I already made that one: “${repeat.title}” is ready whenever ${child.name} is.`
+            : `I'm already making that story for ${child.name}. It will be ready in a couple of minutes.`,
+          { storyId: repeat.id, hero: child.name, status: repeat.status, title: repeat.title, sameRequest: true, newStoryStarted: false },
+          { view: 'studio', story: studioData(repeat, child) },
+          studio,
+        );
+      }
+
+      // Cost guard: live stories call paid models, so cap new ones per family per day. The log survives
+      // forget_story_world, and mock mode (the public demo) is free, so it isn't capped.
+      const today = config.aiMode === 'mock' ? 0 : store.creationsSince(familyId, DAY_MS);
+      if (today >= MAX_STORIES_PER_DAY) {
+        const say =
+          `That's ${MAX_STORIES_PER_DAY} new stories today, which is the daily limit, so the next new one will have to wait until tomorrow. ` +
+          `I can read one of ${child.name}'s stories again instead. Just ask what stories you have.`;
+        return reply(
+          say,
+          { ok: false, limitReached: true, limit: MAX_STORIES_PER_DAY, createdLast24h: today, newStoryStarted: false },
+          { view: 'message', title: "That's plenty of stories for today", body: say },
+        );
+      }
+
       const story = createStory(child, { todaysMoments: todays_moments, theme, length: length ?? 'standard' });
+      if (config.aiMode !== 'mock') store.recordCreation(familyId);
       return reply(
-        `I'm making tonight's story for ${child.name} now. It will be ready in about a minute, so it's all set for bedtime.`,
-        { storyId: story.id, hero: child.name, status: story.status, readyInSeconds: 60 },
+        `I'm making tonight's story for ${child.name} now. It will be ready in a couple of minutes, so it's all set for bedtime.`,
+        { storyId: story.id, hero: child.name, status: story.status, readyInSeconds: 150 },
         { view: 'studio', story: studioData(story, child) },
-        { invoking: 'Opening the story studio…', invoked: 'Story studio' },
+        studio,
       );
     },
   );
@@ -296,28 +503,40 @@ export function createMcpServer(familyId: string) {
       title: 'Open the storybook',
       description:
         'Open a bedtime story to read now: tonight\'s newest story by default ("read my bedtime story", "start the story", "continue the story"), ' +
-        'or a specific earlier one by story_id from story_library. On screens the storybook narrates each page aloud itself with highlighted words, ' +
-        'so do not read page text over it; on voice-only devices read the returned page text.',
+        'or a specific earlier one by story_id from story_library. ' +
+        "On a device with a screen (read_mode 'screen', the default) the storybook narrates every page aloud itself with highlighted words, " +
+        'so say only the short cue returned and never read page text over it. ' +
+        "On a voice-only device with no screen, pass read_mode 'voice': the returned text reads the next pages aloud and ends with " +
+        "\"Shall I keep going?\" (on yes, call turn_page next with read_mode 'voice') or the choice question (then call choose_path).",
       inputSchema: z.object({
         story_id: z.string().optional().describe('Omit for the newest ready story.'),
         hero: z.string().max(40).optional(),
         start_over: z.boolean().optional().describe('true to begin again from page 1; otherwise resume where reading stopped.'),
+        read_mode: readModeInput,
       }),
       annotations: { readOnlyHint: false, openWorldHint: false },
       _meta: uiMeta(),
     },
-    async ({ story_id, hero, start_over }) => {
+    async ({ story_id, hero, start_over, read_mode }) => {
       const { story, child, problem } = resolveStory(familyId, story_id, hero);
       if (!story || !child) return fail(problem!);
       const finished = stepAt(story, story.playback.pageIndex).kind === 'end';
-      if (start_over || finished) story.playback = { pageIndex: 0, wordsExplored: [], pagesHeard: 0 };
+      if (start_over || finished) {
+        story.playback = { pageIndex: 0, wordsExplored: [], pagesHeard: 0 };
+        voiceChunkStart.delete(story.id);
+      }
       story.playback.startedAt ??= new Date().toISOString();
       store.putStory(story);
       const pos = story.playback.pageIndex;
+      const facts = { storyId: story.id, title: story.title, hero: child.name };
+      if (read_mode === 'voice') {
+        const r = voiceRead(story, child, pos);
+        return reply(`“${story.title}”. ${r.say}`, { ...facts, position: r.next, ...r.facts });
+      }
       const step = describeStep(story, child, pos);
       return reply(
-        `“${story.title}”. ${step.say}`,
-        { storyId: story.id, title: story.title, hero: child.name, position: pos, narratedOnScreen: true, ...step.facts },
+        pos === 0 ? `“${story.title}”.` : `“${story.title}”. ${step.say}`,
+        { ...facts, position: pos, readMode: 'screen', narratedOnScreen: true, ...step.facts },
         { view: 'storybook', story: bookData(story, child), position: pos },
         { invoking: 'Opening the storybook…', invoked: story.title ?? 'Storybook' },
       );
@@ -329,19 +548,36 @@ export function createMcpServer(familyId: string) {
     'turn_page',
     {
       title: 'Turn the page',
-      description: 'Move through the open story: "next page", "go back", "read that again", "start from the beginning".',
+      description:
+        'Move through the open story: "next page", "keep going", "go back", "read that again", "start from the beginning". ' +
+        "Pass the same read_mode as open_storybook: with 'voice' (no screen) read the returned pages aloud; with a screen say only the short cue.",
       inputSchema: z.object({
         story_id: z.string().optional(),
         direction: z.enum(['next', 'previous', 'again', 'first']).describe('next = forward, previous = back, again = repeat this page, first = page 1'),
+        read_mode: readModeInput,
       }),
       annotations: { readOnlyHint: false, openWorldHint: false },
       _meta: uiMeta(['model', 'app']),
     },
-    async ({ story_id, direction }) => {
+    async ({ story_id, direction, read_mode }) => {
       const { story, child, problem } = resolveStory(familyId, story_id);
       if (!story || !child) return fail(problem!);
       const cur = story.playback.pageIndex;
       const k = story.pages.length;
+      if (read_mode === 'voice') {
+        // cur is the first page not yet read aloud; "again" repeats the whole last chunk when we know where it began.
+        const began = voiceChunkStart.get(story.id);
+        const last = began && began.from <= cur ? began : undefined;
+        const r =
+          direction === 'next'
+            ? voiceRead(story, child, cur)
+            : direction === 'first'
+              ? voiceRead(story, child, 0)
+              : direction === 'again' && last
+                ? voiceRead(story, child, last.from, last.onePage)
+                : voiceRead(story, child, pageBefore(story, direction === 'again' ? cur : (last?.from ?? cur)), true);
+        return reply(r.say, { storyId: story.id, position: r.next, ...r.facts });
+      }
       let pos = direction === 'next' ? cur + 1 : direction === 'previous' ? Math.max(0, cur - 1) : direction === 'first' ? 0 : cur;
       if (pos > k && !story.playback.branch) pos = k; // can't pass the choice until one is made
       if (stepAt(story, pos).kind === 'end') story.playback.finishedAt ??= new Date().toISOString();
@@ -349,7 +585,11 @@ export function createMcpServer(familyId: string) {
       story.playback.pagesHeard = Math.max(story.playback.pagesHeard, Math.min(pos, k + (story.playback.branch ? 99 : 0)));
       store.putStory(story);
       const step = describeStep(story, child, pos);
-      return reply(step.say, { storyId: story.id, position: pos, narratedOnScreen: true, ...step.facts }, { view: 'storybook', story: bookData(story, child), position: pos });
+      return reply(
+        step.say,
+        { storyId: story.id, position: pos, readMode: 'screen', narratedOnScreen: true, ...step.facts },
+        { view: 'storybook', story: bookData(story, child), position: pos },
+      );
     },
   );
 
@@ -359,26 +599,34 @@ export function createMcpServer(familyId: string) {
     {
       title: 'Choose what happens next',
       description:
-        'At the story\'s choice point, pick which way the story goes, using the child\'s words ("the castle!", "the first one", "follow the fish").',
+        'At the story\'s choice point, pick which way the story goes, passing the child\'s own words as choice ' +
+        '("the castle!", "the second one", "the pillow fort one", "follow the fish"). If the words don\'t match an option, the question comes back to ask again. ' +
+        'Pass the same read_mode as open_storybook.',
       inputSchema: z.object({
         story_id: z.string().optional(),
-        choice: z.string().min(1).max(80).describe('The option label, part of it, or "first"/"second".'),
+        choice: z.string().min(1).max(80).optional().describe('The child\'s words: the option label, part of it, or "first"/"second"/"the other one".'),
+        option_number: z
+          .number()
+          .int()
+          .min(1)
+          .max(2)
+          .optional()
+          .describe('1 or 2, only when you are sure which option the child means (1 = the first option offered). Overrides choice.'),
+        read_mode: readModeInput,
       }),
       annotations: { readOnlyHint: false, openWorldHint: false },
       _meta: uiMeta(['model', 'app']),
     },
-    async ({ story_id, choice }) => {
+    async ({ story_id, choice, option_number, read_mode }) => {
       const { story, child, problem } = resolveStory(familyId, story_id);
       if (!story || !child || !story.choice) return fail(problem ?? 'This story has no choice to make.');
       const [a, b] = story.choice.options;
-      const c = choice.toLowerCase();
-      const words = (s: string) => s.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
-      const score = (o: typeof a) => words(o.label).filter((w) => c.includes(w)).length;
-      const picked =
-        c === 'a' || /\b(first|one|1|left)\b/.test(c) ? a : c === 'b' || /\b(second|two|2|right|other)\b/.test(c) ? b : score(a) >= score(b) && score(a) > 0 ? a : score(b) > 0 ? b : undefined;
-      if (!picked) return reply(`${story.choice.question} Say “${a.label}” or “${b.label}”.`, { awaitingChoice: true, options: [a.label, b.label] });
+      const i = resolveChoice([a.label, b.label], choice, option_number);
+      if (i === undefined) return reply(choicePrompt(story), { storyId: story.id, ...choiceFacts(story), understood: false });
+      const picked = story.choice.options[i];
+      const k = story.pages.length;
       story.playback.branch = picked.id;
-      story.playback.pageIndex = story.pages.length + 1;
+      story.playback.pageIndex = k + 1;
       store.putStory(story);
       const fresh = store.getChild(child.id)!;
       const ep = fresh.world.episodes.find((e) => e.storyId === story.id);
@@ -386,11 +634,15 @@ export function createMcpServer(familyId: string) {
         ep.choiceMade = picked.label;
         store.updateChild(fresh);
       }
-      const step = describeStep(story, child, story.playback.pageIndex);
+      if (read_mode === 'voice') {
+        const r = voiceRead(story, child, k + 1);
+        return reply(`${picked.label}! ${r.say}`, { storyId: story.id, chose: picked.label, position: r.next, ...r.facts });
+      }
+      const step = describeStep(story, child, k + 1);
       return reply(
         `${picked.label}! ${step.say}`,
-        { storyId: story.id, chose: picked.label, position: story.playback.pageIndex, narratedOnScreen: true, ...step.facts },
-        { view: 'storybook', story: bookData(story, child), position: story.playback.pageIndex },
+        { storyId: story.id, chose: picked.label, position: k + 1, readMode: 'screen', narratedOnScreen: true, ...step.facts },
+        { view: 'storybook', story: bookData(story, child), position: k + 1 },
       );
     },
   );
@@ -476,7 +728,8 @@ export function createMcpServer(familyId: string) {
       title: 'Update the story world',
       description:
         'For parents: change what stories include for a child: add a favourite thing, add a topic to never mention, rename the sidekick, ' +
-        'or add a recurring character (e.g. "add Grandma Rose to the stories", "never mention thunderstorms", "Maya loves trains now").',
+        'add a recurring character, change the child\'s nickname, age or reading level ' +
+        '(e.g. "add Grandma Rose to the stories", "never mention thunderstorms", "Maya loves trains now", "call her Mia in the stories", "Maya just turned six").',
       inputSchema: z.object({
         hero: z.string().max(40).optional(),
         add_favorite: z.string().max(60).optional(),
@@ -485,6 +738,12 @@ export function createMcpServer(familyId: string) {
         add_character_name: z.string().max(40).optional(),
         add_character_description: z.string().max(200).optional().describe('What the new character looks like and is like.'),
         rename_sidekick: z.string().max(40).optional(),
+        rename_hero: z.string().min(1).max(40).optional().describe("The child's new nickname in the stories."),
+        set_age: z.number().int().min(2).max(10).optional().describe("The child's age in years."),
+        set_reading_level: z
+          .enum(['pre-reader', 'early-reader', 'independent-reader'])
+          .optional()
+          .describe('How the child reads: pre-reader (listens only), early-reader (sounding out words), independent-reader.'),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
       _meta: uiMeta(),
@@ -493,6 +752,26 @@ export function createMcpServer(familyId: string) {
       const child = store.resolveChild(familyId, a.hero);
       if (!child) return fail('No story hero is set up yet.');
       const changes: string[] = [];
+      const newName = a.rename_hero?.trim();
+      if (newName && newName !== child.name) {
+        const taken = store.childrenOf(familyId).some((c) => c.id !== child.id && c.name.toLowerCase() === newName.toLowerCase());
+        if (taken) changes.push(`${newName} wasn't used because another story hero already has that name`);
+        else {
+          changes.push(`${child.name} is now called ${newName}`);
+          child.name = newName;
+        }
+      }
+      if (a.set_age && a.set_age !== child.age) {
+        // Keep the illustration description in step ("a five-year-old girl…") so pictures age with the child.
+        const was = new RegExp(`\\b(${child.age}|${NUMBER_WORDS[child.age] ?? child.age})-year-old\\b`, 'i');
+        child.appearance = child.appearance.replace(was, `${NUMBER_WORDS[a.set_age]}-year-old`);
+        child.age = a.set_age;
+        changes.push(`${child.name} is now ${a.set_age}`);
+      }
+      if (a.set_reading_level && a.set_reading_level !== child.readingLevel) {
+        child.readingLevel = a.set_reading_level;
+        changes.push(`stories will be written for ${READING_LEVEL_SAY[a.set_reading_level]}`);
+      }
       if (a.add_favorite && !child.favoriteThings.includes(a.add_favorite)) {
         child.favoriteThings.push(a.add_favorite);
         changes.push(`added ${a.add_favorite} to favourite things`);
@@ -515,7 +794,7 @@ export function createMcpServer(familyId: string) {
       }
       store.updateChild(child);
       const say = changes.length ? `Done: ${changes.join('; ')}.` : `Here's ${child.name}'s story world. Nothing was changed.`;
-      return reply(say, { hero: child.name, changes }, { view: 'world', hero: heroData(child) });
+      return reply(say, { hero: child.name, age: child.age, readingLevel: child.readingLevel, changes }, { view: 'world', hero: heroData(child) });
     },
   );
 
@@ -524,19 +803,57 @@ export function createMcpServer(familyId: string) {
     {
       title: 'Forget story history',
       description:
-        "For parents: permanently delete a child's stories, illustrations and story memories. Only call with confirm=true after the parent has clearly confirmed.",
-      inputSchema: z.object({ hero: z.string().max(40).optional(), confirm: z.boolean().describe('Must be true; ask the parent to confirm first.') }),
+        "For parents: permanently delete a child's stories (with their illustrations and narration) and story memories (past story nights, recurring characters, places). " +
+        'Two steps, enforced by the server: first call without confirm, read the returned warning to the parent and keep its confirmation_token; ' +
+        'only if the parent then clearly says yes, call again with confirm=true and that confirmation_token (single use, valid 5 minutes).',
+      inputSchema: z.object({
+        hero: z.string().max(40).optional(),
+        confirm: z.boolean().optional().describe('true only on the second call, after the parent clearly said yes to the warning.'),
+        confirmation_token: z.string().max(64).optional().describe('The confirmation_token returned by the first call.'),
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async ({ hero, confirm }) => {
+    async ({ hero, confirm, confirmation_token }) => {
       const child = store.resolveChild(familyId, hero);
       if (!child) return fail('No story hero is set up yet.');
-      if (!confirm) return reply(`This will delete all of ${child.name}'s stories and story memories. Are you sure?`, { needsConfirmation: true });
-      const n = store.deleteStoriesFor(child.id);
-      child.world.episodes = [];
-      child.world.recurringCharacters = [];
-      store.updateChild(child);
-      return reply(`Done. I deleted ${n} ${n === 1 ? 'story' : 'stories'} and ${child.name}'s story memories.`, { deleted: n });
+      const w = child.world;
+      const stories = store.storiesFor(child.id).length;
+      const characters = w.recurringCharacters.map((c) => c.name);
+      const doomed = [
+        stories && `${child.name}'s ${plural(stories, 'story', 'stories')} with their pictures and narration`,
+        w.episodes.length && `the memories of ${plural(w.episodes.length, 'past story night', 'past story nights')}`,
+        characters.length && `${characters.length === 1 ? 'the recurring character' : 'the recurring characters'} ${listOf(characters)}`,
+        w.places.length && `${w.places.length === 1 ? 'the story place' : 'the story places'}: ${listOf(w.places)}`,
+      ].filter((x): x is string => Boolean(x));
+      if (!doomed.length) return reply(`${child.name} has no stories or story memories to delete.`, { hero: child.name, deleted: 0, nothingToDelete: true });
+      const what = doomed.length > 1 ? `${doomed.slice(0, -1).join('; ')}; and ${doomed.at(-1)}` : doomed[0];
+      const kept = `${w.sidekick.name} the sidekick, ${child.name}'s favourite things and the topics to avoid`;
+      const willDelete = { stories, storyNights: w.episodes.length, characters, places: [...w.places] };
+
+      if (confirm === true && redeemForgetToken(confirmation_token, familyId, child.id)) {
+        const n = store.deleteStoriesFor(child.id);
+        w.episodes = [];
+        w.recurringCharacters = [];
+        w.places = [];
+        store.updateChild(child);
+        return reply(`Done. I deleted ${what}. ${kept} are still there.`, {
+          hero: child.name,
+          deleted: { ...willDelete, stories: n },
+          kept: ['sidekick', 'favoriteThings', 'avoid'],
+        });
+      }
+
+      // Anything else (first call, missing, expired, reused or someone else's token) asks again with a fresh token.
+      const token = issueForgetToken(familyId, child.id);
+      const again = confirm !== true ? '' : confirmation_token ? 'That confirmation has expired, so nothing has been deleted yet. ' : 'Nothing has been deleted yet. ';
+      return reply(`${again}This will permanently delete ${what}. ${kept} will stay. Are you sure?`, {
+        hero: child.name,
+        needsConfirmation: true,
+        confirmation_token: token,
+        expiresInSeconds: FORGET_TTL_MS / 1000,
+        willDelete,
+        willKeep: ['sidekick', 'favoriteThings', 'avoid'],
+      });
     },
   );
 

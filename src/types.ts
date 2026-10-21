@@ -40,7 +40,9 @@ export interface Family {
   id: string;
   parentName: string;
   email: string;
-  password: string; // demo-only; plain value so judges can sign in with the seeded family
+  /** scrypt(password, salt), base64. Plain passwords are never stored; older db.json files are migrated on load. */
+  passwordHash: string;
+  passwordSalt: string;
   childIds: string[];
 }
 
@@ -106,7 +108,23 @@ export interface Story {
   episodeSummary?: string;
   newCharacters?: Character[];
   newPlaces?: string[];
-  safety?: { checked: boolean; provider: string; notes?: string };
+  safety?: {
+    checked: boolean;
+    provider: string;
+    notes?: string;
+    /** Illustrations Amazon Rekognition looked at (repaints included). */
+    imagesChecked?: number;
+    /** Repaints with a new seed after Rekognition flagged a picture. */
+    imagesRegenerated?: number;
+    /** Pages that fell back to the previous page's picture. */
+    imagesReplaced?: number;
+    /** Pictures kept without a Rekognition verdict because the check was unavailable. */
+    imagesUnchecked?: number;
+  };
+  /** Estimated AWS spend for this story at list prices (see src/story/cost.ts). */
+  cost?: { usd: number; items: { label: string; qty: number; usd: number }[] };
+  /** Wall-clock time from request to ready (or failed). */
+  generationMs?: number;
   playback: Playback;
 }
 
@@ -132,11 +150,14 @@ export interface AuthCode {
 }
 
 export interface TokenRecord {
-  token: string;
+  /** sha256(token), hex — also the store key. The raw token only ever lives with the client. */
+  tokenHash: string;
   kind: 'access' | 'refresh';
   clientId: string;
   familyId: string;
   scope: string;
   resource?: string;
   expiresAt: number;
+  /** Refresh tokens: when it was exchanged. Kept until expiry so a replay can be detected and the grant revoked. */
+  rotatedAt?: number;
 }

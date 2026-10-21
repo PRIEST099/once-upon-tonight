@@ -1,5 +1,6 @@
 import { InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { bedrockImages } from './aws.js';
+import { PRICES, record } from './cost.js';
 import { config } from '../config.js';
 import type { Character } from '../types.js';
 
@@ -51,5 +52,6 @@ export async function illustrate(prompt: string, seed: number): Promise<Uint8Arr
   const out = JSON.parse(new TextDecoder().decode(res.body));
   const filtered = Array.isArray(out.finish_reasons) && out.finish_reasons[0];
   if (out.error || filtered || !out.images?.[0]) throw new Error(out.error ?? filtered ?? 'No image returned');
+  record(PRICES.image, 1);
   return Buffer.from(out.images[0], 'base64');
 }

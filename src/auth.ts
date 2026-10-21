@@ -9,7 +9,8 @@ import type { OAuthClient } from './types.js';
  *  - Protected Resource Metadata (RFC 9728) at /.well-known/oauth-protected-resource[/mcp]
  *  - Authorization Server Metadata (RFC 8414) at /.well-known/oauth-authorization-server
  *  - Authorization code + PKCE (S256 only) with the RFC 8707 `resource` parameter
- *  - Refresh tokens with rotation
+ *  - Refresh tokens with rotation and reuse detection (a replayed refresh token revokes the whole grant)
+ *  - Only sha256(token) is persisted; parent passwords are scrypt hashes
  *  - Bare 401 on unauthenticated MCP requests (Alexa+ ignores WWW-Authenticate; discovery is via PRM)
  * Dynamic Client Registration is also offered for other MCP hosts; Alexa+ uses a pre-registered client.
  */
@@ -18,6 +19,8 @@ const SCOPES = ['stories'];
 const ACCESS_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TTL_MS = 60 * 24 * 60 * 60 * 1000;
 const CODE_TTL_MS = 5 * 60 * 1000;
+const PENDING_TTL_MS = 10 * 60 * 1000;
+const MAX_PENDING = 5000;
 
 const b64url = (buf: Buffer) => buf.toString('base64url');
 const randomToken = (bytes = 32) => b64url(randomBytes(bytes));
@@ -87,8 +90,32 @@ export function authorizationServerMetadata() {
 /** Pending authorization requests between GET /authorize (form shown) and POST /authorize (form submitted). */
 const pending = new Map<string, { params: Record<string, string>; client: OAuthClient; expiresAt: number }>();
 
+/** Fixed one-minute windows per IP + endpoint, for the endpoints that take guessable input. */
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimit(bucket: string, onLimit: (res: Response) => void) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // A fixed bucket name, not req.path: Express routes "/TOKEN" to "/token", which must not get its own quota.
+    const key = `${bucket} ${req.ip}`;
+    const now = Date.now();
+    let h = hits.get(key);
+    if (!h || h.resetAt <= now) hits.set(key, (h = { count: 0, resetAt: now + 60_000 }));
+    if (++h.count <= config.authRateLimitPerMinute) return next();
+    res.status(429).set('Retry-After', String(Math.ceil((h.resetAt - now) / 1000)));
+    onLimit(res);
+  };
+}
+
+// Housekeeping: abandoned sign-ins, stale rate-limit windows, expired tokens/codes.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pending) if (v.expiresAt < now) pending.delete(k);
+  for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+  store.pruneExpired();
+}, 60_000).unref();
+
 export function authRouter() {
-  const r = express.Router();
+  const r = express.Router({ caseSensitive: true });
   r.use(express.urlencoded({ extended: false }));
 
   r.get(['/.well-known/oauth-protected-resource', `/.well-known/oauth-protected-resource${MCP_PATH}`], (_req, res) => {
@@ -148,11 +175,14 @@ export function authRouter() {
       return back({ error: 'invalid_target', error_description: 'Unknown resource' });
     }
     const txn = randomToken(16);
-    pending.set(txn, { params: q, client, expiresAt: Date.now() + 10 * 60 * 1000 });
+    // Map iteration is insertion-ordered, so this evicts the oldest sign-in if someone floods the page.
+    if (pending.size >= MAX_PENDING) pending.delete(pending.keys().next().value!);
+    pending.set(txn, { params: q, client, expiresAt: Date.now() + PENDING_TTL_MS });
     res.send(consentPage(txn, client.clientName));
   });
 
-  r.post('/authorize', (req, res) => {
+  const authorizeLimit = rateLimit('authorize', (res) => res.send(errorPage('Too many tries', 'Please wait a minute, then try again.')));
+  r.post('/authorize', authorizeLimit, async (req, res) => {
     const txn = pending.get(String(req.body.txn ?? ''));
     if (!txn || txn.expiresAt < Date.now()) return res.status(400).send(errorPage('Sign-in expired', 'Please start linking again.'));
     const { params, client } = txn;
@@ -164,11 +194,12 @@ export function authRouter() {
       u.searchParams.set('error', 'access_denied');
       return res.redirect(u.toString());
     }
-    const family = store.findFamilyByEmail(String(req.body.email ?? ''));
-    if (!family || family.password !== String(req.body.password ?? '')) {
+    const family = await store.verifyFamilyLogin(String(req.body.email ?? ''), String(req.body.password ?? ''));
+    if (!family) {
       return res.status(401).send(consentPage(String(req.body.txn), client.clientName, 'That email and password did not match.'));
     }
-    pending.delete(String(req.body.txn));
+    // The txn may have been used by a parallel submit while scrypt ran.
+    if (!pending.delete(String(req.body.txn))) return res.status(400).send(errorPage('Sign-in expired', 'Please start linking again.'));
     const code = randomToken(24);
     store.putCode({
       code,
@@ -185,7 +216,8 @@ export function authRouter() {
   });
 
   // ---- Token endpoint ----
-  r.post('/token', express.urlencoded({ extended: false }), (req, res) => {
+  const tokenLimit = rateLimit('token', (res) => oauthError(res, 429, 'temporarily_unavailable', 'Too many requests; try again in a minute'));
+  r.post('/token', tokenLimit, express.urlencoded({ extended: false }), (req, res) => {
     const client = authenticateClient(req);
     if (!client) return oauthError(res, 401, 'invalid_client', 'Client authentication failed');
     const body = req.body ?? {};
@@ -210,10 +242,20 @@ export function authRouter() {
 
     if (body.grant_type === 'refresh_token') {
       const rt = store.getToken(String(body.refresh_token ?? ''));
+      if (rt?.kind === 'refresh' && rt.rotatedAt && rt.clientId === client.clientId && Date.now() - rt.rotatedAt < 60_000) {
+        // A retry of a refresh whose response was lost (token services retry on timeouts): don't log the user out.
+        return issueTokens(res, client.clientId, rt.familyId, rt.scope, rt.resource);
+      }
+      if (rt?.kind === 'refresh' && rt.rotatedAt && rt.clientId === client.clientId) {
+        // A later replay of an already-rotated refresh token: someone else may hold a copy, so end the whole grant.
+        const n = store.revokeGrant(rt.clientId, rt.familyId);
+        console.warn(`[auth] refresh token reuse for client ${rt.clientId}, family ${rt.familyId}; revoked ${n} tokens`);
+        return oauthError(res, 400, 'invalid_grant', 'Refresh token was already used');
+      }
       if (!rt || rt.kind !== 'refresh' || rt.expiresAt < Date.now() || rt.clientId !== client.clientId) {
         return oauthError(res, 400, 'invalid_grant', 'Refresh token is invalid or expired');
       }
-      store.deleteToken(rt.token); // rotation
+      store.markRotated(rt.tokenHash); // rotation: kept (until expiry) only to catch replays
       return issueTokens(res, client.clientId, rt.familyId, rt.scope, rt.resource);
     }
 
@@ -223,7 +265,7 @@ export function authRouter() {
   r.post('/revoke', express.urlencoded({ extended: false }), (req, res) => {
     const client = authenticateClient(req);
     const t = store.getToken(String(req.body?.token ?? ''));
-    if (client && t && t.clientId === client.clientId) store.deleteToken(t.token);
+    if (client && t && t.clientId === client.clientId) store.deleteToken(t.tokenHash);
     res.status(200).end();
   });
 
@@ -263,8 +305,8 @@ function issueTokens(res: Response, clientId: string, familyId: string, scope: s
   const access = randomToken();
   const refresh = randomToken();
   const now = Date.now();
-  store.putToken({ token: access, kind: 'access', clientId, familyId, scope, resource, expiresAt: now + ACCESS_TTL_MS });
-  store.putToken({ token: refresh, kind: 'refresh', clientId, familyId, scope, resource, expiresAt: now + REFRESH_TTL_MS });
+  store.putToken(access, { kind: 'access', clientId, familyId, scope, resource, expiresAt: now + ACCESS_TTL_MS });
+  store.putToken(refresh, { kind: 'refresh', clientId, familyId, scope, resource, expiresAt: now + REFRESH_TTL_MS });
   res.set('Cache-Control', 'no-store').json({
     access_token: access,
     token_type: 'Bearer',
@@ -299,7 +341,7 @@ export function requireMcpAuth(req: Request, res: Response, next: NextFunction) 
     return res.status(401).json({ error: 'invalid_token', error_description: bearer ? 'Token is invalid or expired' : 'Authorization required' });
   }
   (req as any).auth = {
-    token: t.token,
+    token: bearer,
     clientId: t.clientId,
     scopes: t.scope.split(' '),
     expiresAt: Math.floor(t.expiresAt / 1000),
@@ -334,9 +376,9 @@ function consentPage(txn: string, clientName: string, error?: string) {
 ${error ? `<p class="err">${escapeHtml(error)}</p>` : ''}
 <form method="post" action="/authorize">
 <input type="hidden" name="txn" value="${txn}">
-<label for="email">Parent email</label><input id="email" name="email" type="email" autocomplete="username" value="parent@example.com" required>
-<label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" value="bedtime" required>
-<p class="hint">Demo family: parent@example.com / bedtime</p>
+<label for="email">Parent email</label><input id="email" name="email" type="email" autocomplete="username"${config.demoMode ? ' value="parent@example.com"' : ''} required>
+<label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password"${config.demoMode ? ' value="bedtime"' : ''} required>
+${config.demoMode ? '<p class="hint">Demo family: parent@example.com / bedtime</p>' : ''}
 <div class="row"><button class="deny" name="action" value="deny" formnovalidate>Not now</button><button class="allow" name="action" value="allow">Link account</button></div>
 </form>`,
   );

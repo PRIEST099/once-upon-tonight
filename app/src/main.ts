@@ -10,7 +10,11 @@ interface Book {
   wordOfTheNight?: { word: string; meaning: string; example: string; audioUrl?: string };
   branch?: 'a' | 'b';
 }
-interface Studio { id: string; hero: string; status: string; title?: string; step: string; log: string[]; done: number; total: number; error?: string; preview: string[] }
+interface Studio {
+  id: string; hero: string; status: string; title?: string; step: string; log: string[]; done: number; total: number; error?: string; preview: string[];
+  /** Optional: estimated AWS spend and wall-clock time, when the server passes them through. */
+  cost?: { usd?: number; items?: { label: string; qty: number; usd: number }[] }; generationMs?: number;
+}
 type View =
   | { view: 'studio'; story: Studio }
   | { view: 'storybook'; story: Book; position: number }
@@ -301,7 +305,7 @@ function choose(id: 'a' | 'b') {
   book.branch = id;
   const label = book.choice!.options.find((o) => o.id === id)!.label;
   goTo(book.pages.length + 1, false);
-  quiet(app.callServerTool({ name: 'choose_path', arguments: { story_id: book.id, choice: id === 'a' ? 'first' : 'second' } }));
+  quiet(app.callServerTool({ name: 'choose_path', arguments: { story_id: book.id, option_number: id === 'a' ? 1 : 2 } }));
   updateContext(`The child chose “${label}”.`);
 }
 
@@ -336,11 +340,23 @@ function updateContext(text: string) {
 let poll = 0;
 const STUDIO_STEPS = [
   { key: 'writing', ico: '✍️', label: 'Writing the story', sub: 'Amazon Bedrock · Claude' },
-  { key: 'checking', ico: '🛡️', label: 'Bedtime safety check', sub: 'Bedrock Guardrails + your rules' },
-  { key: 'illustrating', ico: '🎨', label: 'Painting the pictures', sub: 'Bedrock · Stable Image' },
+  { key: 'checking', ico: '🛡️', label: 'Bedtime safety check', sub: 'Guardrails + Claude review' },
+  { key: 'illustrating', ico: '🎨', label: 'Painting the pictures', sub: 'Bedrock · SD3.5 Large + Rekognition check' },
   { key: 'narrating', ico: '🎙️', label: 'Recording the narration', sub: 'Amazon Polly' },
   { key: 'ready', ico: '🌙', label: 'Ready for bedtime', sub: 'Remembered for next time' },
 ];
+
+/** "≈ $0.42 · made in 3m 5s" under a finished story; either half is skipped if the server didn't send it. */
+function madeIn(s: Studio) {
+  const n = s.cost?.usd;
+  const usd = typeof n !== 'number' || !Number.isFinite(n) ? '' : n > 0 && n < 0.005 ? '< $0.01' : `≈ $${n.toFixed(2)}`;
+  const secs = typeof s.generationMs === 'number' && s.generationMs >= 0 ? Math.round(s.generationMs / 1000) : undefined;
+  const took = secs === undefined ? '' : `made in ${Math.floor(secs / 60)}m ${secs % 60}s`;
+  const items = Array.isArray(s.cost?.items) ? s.cost.items : [];
+  const breakdown = ['Estimated at AWS list prices', ...items.map((i) => `${i.label}: ${Number(i.qty).toLocaleString()} → $${Number(i.usd).toFixed(4)}`)].join('\n');
+  const line = [usd, took].filter(Boolean).join(' · ');
+  return line ? `<p class="sub made-in" style="font-size:calc(12 * var(--u));opacity:0.8"${usd ? ` title="${esc(breakdown)}"` : ''}>${esc(line)}</p>` : '';
+}
 
 function drawStudio(s: Studio) {
   stopAudio();
@@ -355,6 +371,7 @@ function drawStudio(s: Studio) {
         <div class="kicker">Story studio</div>
         <h1>${s.status === 'ready' ? `“${esc(s.title)}”` : s.status === 'failed' ? 'That story got tangled' : `Making tonight's story for ${esc(s.hero)}`} ${s.status === 'ready' || s.status === 'failed' ? '' : '<span class="quill">🪶</span>'}</h1>
         <p class="sub">${esc(s.status === 'failed' ? s.error ?? 'Please try again.' : s.step)}</p>
+        ${s.status === 'ready' ? madeIn(s) : ''}
         <div class="progress"><i style="width:${pct}%"></i></div>
         <div class="thumbs">${s.preview.map((u) => `<img alt="" src="${esc(u)}"/>`).join('')}</div>
         ${s.status === 'ready' ? `<div><button class="primary-btn read-now">${icon.play.replace('<svg', '<svg width="18" height="18"')} Read it now</button></div>` : ''}

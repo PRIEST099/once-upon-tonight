@@ -1,5 +1,6 @@
 import { SynthesizeSpeechCommand, type Engine, type VoiceId } from '@aws-sdk/client-polly';
 import { polly } from './aws.js';
+import { PRICES, record } from './cost.js';
 import { config } from '../config.js';
 import type { SpeechMark } from '../types.js';
 
@@ -14,6 +15,7 @@ async function synth(text: string, format: 'mp3' | 'json', engine: string) {
       ...(format === 'mp3' && { SampleRate: '24000' }),
     }),
   );
+  record(PRICES.polly[engine] ?? PRICES.polly.neural, text.length);
   return new Uint8Array(await res.AudioStream!.transformToByteArray());
 }
 

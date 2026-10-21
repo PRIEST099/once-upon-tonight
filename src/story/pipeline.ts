@@ -7,18 +7,24 @@ import type { Character, Child, Page, Story, StoryRequest } from '../types.js';
 import { writeStory, type DraftPage, type StoryDraft } from './writer.js';
 import { illustrate, illustrationPrompt } from './illustrator.js';
 import { narrate } from './narrator.js';
-import { checkParentInput, checkStoryText } from './safety.js';
+import { checkParentInput, checkStoryText, moderateImage } from './safety.js';
+import { CostMeter, metered } from './cost.js';
+import { withRetry } from './retry.js';
 
 /**
  * The agentic story pipeline. A tool call only enqueues work (Alexa+ expects sub-500 ms tool
  * responses); the multi-step generation runs in the background and reports progress on the story
  * record, which the Studio view polls:
- *   1. write   — Amazon Bedrock (Converse + forced tool call) writes a branching story from today's
- *                moments and the child's persistent story world
- *   2. check   — Amazon Bedrock Guardrails + the parent's avoid-list
- *   3. draw    — Amazon Nova Canvas illustrates every page with a shared seed and cast descriptions
+ *   1. write   — Claude Sonnet on Amazon Bedrock (Converse + forced tool call) writes a branching
+ *                story from today's moments and the child's persistent story world
+ *   2. check   — the parent's avoid-list, then Amazon Bedrock Guardrails and a Claude Haiku
+ *                bedtime-suitability review on every page (the parent's request is screened first)
+ *   3. draw    — Stability AI SD3.5 Large on Bedrock illustrates every page with a shared seed and
+ *                cast descriptions; Amazon Rekognition moderates each picture before it is kept
  *   4. narrate — Amazon Polly reads every page, returning word timings for read-along highlighting
  *   5. remember — the episode is folded into the child's story world for tomorrow night
+ * Every AWS call reports its usage to a per-story meter, so a finished story carries an estimate
+ * of what it cost to make (story.cost) and how long it took (story.generationMs).
  */
 export function createStory(child: Child, request: StoryRequest): Story {
   const story: Story = {
@@ -33,15 +39,36 @@ export function createStory(child: Child, request: StoryRequest): Story {
     playback: { pageIndex: 0, wordsExplored: [], pagesHeard: 0 },
   };
   store.putStory(story);
+  const meter = new CostMeter();
   const run = config.aiMode === 'mock' ? runMock : runBedrock;
-  run(story, child).catch((err) => {
+  metered(meter, () => run(story, child, meter)).catch((err) => {
+    if (err instanceof Cancelled || !store.getStory(story.id)) {
+      // The parent deleted the story world mid-generation: stop, and remove anything written since.
+      console.log(`[pipeline] ${story.id} stopped: deleted while being made`);
+      fs.rm(path.join(mediaDir(), story.id), { recursive: true, force: true }).catch(() => {});
+      return;
+    }
     console.error(`[pipeline] ${story.id} failed`, err);
-    update(story, { status: 'failed', error: friendlyError(err) }, `Something went wrong: ${friendlyError(err)}`);
+    update(story, { status: 'failed', error: friendlyError(err), ...spent(story, meter) }, `Something went wrong: ${friendlyError(err)}`);
   });
   return story;
 }
 
+/** What the story cost so far, and how long since it was asked for. No AWS is called in mock mode. */
+const spent = (story: Story, meter: CostMeter): Pick<Story, 'cost' | 'generationMs'> => ({
+  ...(config.aiMode !== 'mock' && { cost: meter.summary() }),
+  generationMs: Date.now() - Date.parse(story.createdAt),
+});
+
+/** Thrown to stop a pipeline whose story was deleted (forget_story_world) while it was being made. */
+class Cancelled extends Error {}
+/** Never write a deleted story back: that would resurrect it after the parent asked to forget it. */
+function ensureAlive(story: Story) {
+  if (!store.getStory(story.id)) throw new Cancelled(`story ${story.id} was deleted`);
+}
+
 function update(story: Story, patch: Partial<Story>, logLine?: string) {
+  ensureAlive(story);
   Object.assign(story, patch);
   if (logLine) {
     story.progress.step = logLine;
@@ -51,15 +78,16 @@ function update(story: Story, patch: Partial<Story>, logLine?: string) {
 }
 
 const tick = (story: Story, n = 1) => {
+  ensureAlive(story);
   story.progress.done += n;
   store.putStory(story);
 };
 
-async function runBedrock(story: Story, child: Child) {
+async function runBedrock(story: Story, child: Child, meter: CostMeter) {
   update(story, { status: 'writing' }, `Writing a story about ${child.name}'s day`);
   const input = await checkParentInput(`${story.request.todaysMoments} ${story.request.theme ?? ''}`);
   if (!input.ok) throw new Error(input.message ?? 'That request needs to be a little gentler for bedtime.');
-  // Write, then check with the guardrail; if a draft is flagged, rewrite it once, gentler.
+  // Write, then check every page; if a draft is flagged, rewrite it once, gentler.
   let request = story.request;
   let safety: Awaited<ReturnType<typeof checkStoryText>> = { ok: false, provider: '' };
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -77,7 +105,7 @@ async function runBedrock(story: Story, child: Child) {
   const narrationItems = allPages.length + 2; // + choice question + word of the night
   story.progress.total = 2 + allPages.length + narrationItems + 1;
   story.progress.done = 2;
-  story.safety = { checked: true, provider: safety.provider };
+  const checks = (story.safety = { checked: true, provider: safety.provider, imagesChecked: 0, imagesRegenerated: 0, imagesReplaced: 0, imagesUnchecked: 0 });
   tick(story);
 
   update(story, { status: 'illustrating' }, `Painting ${allPages.length} illustrations`);
@@ -95,14 +123,17 @@ async function runBedrock(story: Story, child: Child) {
     page.marks = marks;
     tick(story);
   });
+  // Awaited after painting; until then, an early failure must not become an unhandled rejection.
+  narration.catch(() => {});
   // Image models have low on-demand rate limits: paint one page at a time, backing off when throttled.
   await pool(allPages, 1, async (page, i) => {
     const prompt = illustrationPrompt(page.illustrationPrompt, sceneCast(page), cast);
     try {
-      page.imageUrl = await saveMedia(story.id, `${page.id}.jpg`, await withRetry(() => illustrate(prompt, seed)));
+      page.imageUrl = await saveMedia(story.id, `${page.id}.jpg`, await paintChecked(prompt, seed, checks));
     } catch (err) {
       // Never lose the whole story over one picture: reuse the previous page's illustration.
-      console.warn(`[pipeline] illustration ${i} failed; reusing the previous picture`, err);
+      console.warn(`[pipeline] illustration ${i} failed or was flagged; reusing the previous picture`, err);
+      checks.imagesReplaced++;
       page.imageUrl = allPages[i - 1]?.imageUrl ?? allPages.find((p) => p.imageUrl)?.imageUrl;
     }
     tick(story);
@@ -110,17 +141,47 @@ async function runBedrock(story: Story, child: Child) {
 
   update(story, { status: 'narrating' }, 'Recording the narration');
   await narration;
-  const q = await narrate(story.choice!.question);
+  const q = await withRetry(() => narrate(story.choice!.question));
   story.choice!.questionAudioUrl = await saveMedia(story.id, 'choice.mp3', q.audio);
   tick(story);
   const w = story.wordOfTheNight!;
-  const wa = await narrate(`${w.word}. ${w.meaning} For example: ${w.example}`);
+  const wa = await withRetry(() => narrate(`${w.word}. ${w.meaning} For example: ${w.example}`));
   w.audioUrl = await saveMedia(story.id, 'word.mp3', wa.audio);
   tick(story);
 
   remember(child, story);
   story.progress.done = story.progress.total;
-  update(story, { status: 'ready' }, `Tonight's story is ready: “${story.title}”`);
+  update(story, { status: 'ready', ...spent(story, meter) }, `Tonight's story is ready: “${story.title}”`);
+}
+
+/** Repaints (each with a fresh seed) allowed after Rekognition flags an illustration. */
+const MAX_REPAINTS = 2;
+
+/**
+ * Paint one page, then let Amazon Rekognition look at the actual pixels before we keep them. A
+ * flagged picture is repainted with a new seed. If the repaints are flagged too, this throws and
+ * the caller reuses the previous page's picture. If the check itself is unavailable, the picture is
+ * kept and counted as unchecked (it has still passed the image model's built-in filter).
+ */
+async function paintChecked(prompt: string, seed: number, checks: { imagesChecked: number; imagesRegenerated: number; imagesUnchecked?: number }) {
+  for (let attempt = 0; ; attempt++) {
+    const image = await withRetry(() => illustrate(prompt, attempt ? Math.floor(Math.random() * 2_000_000) : seed));
+    let verdict: Awaited<ReturnType<typeof moderateImage>>;
+    try {
+      verdict = await moderateImage(image);
+    } catch (err) {
+      // Rekognition unavailable (permissions, outage): keep the picture, which already passed the image
+      // model's own safety filter, and record that it went unchecked rather than losing every illustration.
+      console.warn('[pipeline] Rekognition check unavailable; keeping the illustration unchecked', err);
+      checks.imagesUnchecked = (checks.imagesUnchecked ?? 0) + 1;
+      return image;
+    }
+    checks.imagesChecked++;
+    if (verdict.ok) return image;
+    if (attempt >= MAX_REPAINTS) throw new Error(`Rekognition flagged the picture ${attempt + 1} times (${verdict.labels.join(', ')})`);
+    console.warn(`[pipeline] Rekognition flagged an illustration (${verdict.labels.join(', ')}); repainting with a new seed`);
+    checks.imagesRegenerated++;
+  }
 }
 
 /** Map the model's draft onto our story record with stable page ids. */
@@ -152,6 +213,7 @@ const sceneCast = (p: Page) => ((p as any)._cast as string[] | undefined) ?? [];
 
 /** Fold tonight's episode into the child's persistent story world (context across sessions). */
 function remember(child: Child, story: Story) {
+  ensureAlive(story);
   const fresh = store.getChild(child.id) ?? child;
   const known = new Set([fresh.world.sidekick.name, ...fresh.world.recurringCharacters.map((c) => c.name)].map((n) => n.toLowerCase()));
   for (const c of story.newCharacters ?? []) {
@@ -170,7 +232,7 @@ function remember(child: Child, story: Story) {
 
 // ---- mock mode: replay the bundled seed story so the project runs without AWS -------------
 
-async function runMock(story: Story, child: Child) {
+async function runMock(story: Story, child: Child, meter: CostMeter) {
   const seedDir = path.resolve('seed');
   const seedStory = JSON.parse(await fs.readFile(path.join(seedDir, 'story.json'), 'utf8')) as Story;
   const steps: [Story['status'], string][] = [
@@ -205,25 +267,10 @@ async function runMock(story: Story, child: Child) {
   });
   remember(child, story);
   story.progress.done = story.progress.total;
-  update(story, { status: 'ready' }, `Tonight's story is ready: “${story.title}”`);
+  update(story, { status: 'ready', ...spent(story, meter) }, `Tonight's story is ready: “${story.title}”`);
 }
 
 // ---- helpers ---------------------------------------------------------------------------------
-
-/** Retry AWS calls, backing off exponentially when Bedrock/Polly throttle us. */
-async function withRetry<T>(fn: () => Promise<T>, tries = 5): Promise<T> {
-  let delay = 4000;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await fn();
-    } catch (err: any) {
-      const throttled = err?.name === 'ThrottlingException' || err?.$metadata?.httpStatusCode === 429;
-      if (attempt >= tries || (!throttled && attempt >= 2)) throw err;
-      await new Promise((r) => setTimeout(r, throttled ? delay : 1000));
-      delay *= 2;
-    }
-  }
-}
 
 async function pool<T>(items: T[], size: number, fn: (item: T, i: number) => Promise<void>) {
   let next = 0;

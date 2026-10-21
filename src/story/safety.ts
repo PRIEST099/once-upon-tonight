@@ -1,7 +1,17 @@
 import { ApplyGuardrailCommand, ConverseCommand, type GuardrailAssessment } from '@aws-sdk/client-bedrock-runtime';
-import { bedrock } from './aws.js';
+import { DetectModerationLabelsCommand } from '@aws-sdk/client-rekognition';
+import { bedrock, rekognition } from './aws.js';
+import { PRICES, record, recordTokens } from './cost.js';
+import { withRetry } from './retry.js';
 import { config } from '../config.js';
 import type { Child } from '../types.js';
+
+if (!config.guardrailId && config.aiMode !== 'mock') {
+  console.warn(
+    '\n⚠️  [safety] GUARDRAIL_ID is not set: Guardrails layer is OFF; only the bedtime review runs.\n' +
+      '   Content filters and prompt-attack detection are skipped. Run `npm run create-guardrail` and set GUARDRAIL_ID.\n',
+  );
+}
 
 export interface GuardrailVerdict {
   ok: boolean;
@@ -13,14 +23,17 @@ export interface GuardrailVerdict {
 /** Run one text through the Bedrock Guardrail and say which policies fired. */
 export async function applyGuardrail(text: string, source: 'INPUT' | 'OUTPUT'): Promise<GuardrailVerdict> {
   if (!config.guardrailId) return { ok: true, reasons: [] };
-  const res = await bedrock.send(
-    new ApplyGuardrailCommand({
-      guardrailIdentifier: config.guardrailId,
-      guardrailVersion: config.guardrailVersion,
-      source,
-      content: [{ text: { text } }],
-    }),
+  const res = await withRetry(() =>
+    bedrock.send(
+      new ApplyGuardrailCommand({
+        guardrailIdentifier: config.guardrailId,
+        guardrailVersion: config.guardrailVersion,
+        source,
+        content: [{ text: { text } }],
+      }),
+    ),
   );
+  record(PRICES.guardrail, (res.usage?.contentPolicyUnits ?? 0) + (res.usage?.topicPolicyUnits ?? 0));
   return { ok: res.action !== 'GUARDRAIL_INTERVENED', reasons: firedPolicies(res.assessments ?? []), message: res.outputs?.[0]?.text };
 }
 
@@ -35,9 +48,10 @@ function firedPolicies(assessments: GuardrailAssessment[]) {
 
 /**
  * Second line of defence after the author prompt: the parent's own "never mention" list, then an
- * Amazon Bedrock Guardrail on every page. Pages are checked one at a time, which is what a reader
- * sees. Checking the whole story as one blob made the topic classifier over-react: a supervised
- * swimming lesson plus a nervous moment, read together, looked like "unsafe activities".
+ * Amazon Bedrock Guardrail and the Claude bedtime review on every page. Pages are checked one at a
+ * time, which is what a reader sees. Checking the whole story as one blob made the topic classifier
+ * over-react: a supervised swimming lesson plus a nervous moment, read together, looked like
+ * "unsafe activities".
  */
 export async function checkStoryText(child: Child, texts: string[]): Promise<{ ok: boolean; provider: string; notes?: string }> {
   const joined = texts.join('\n');
@@ -130,15 +144,18 @@ const reviewTool = {
 
 export async function reviewForBedtime(items: ReviewItem[]): Promise<ReviewVerdict[]> {
   const body = items.map((it, i) => `${i + 1}. [${it.kind === 'request' ? "parent's request" : 'story page'}] ${it.text}`).join('\n\n');
-  const res = await bedrock.send(
-    new ConverseCommand({
-      modelId: config.reviewModelId,
-      system: [{ text: RUBRIC }],
-      messages: [{ role: 'user', content: [{ text: body }] }],
-      inferenceConfig: { maxTokens: 300 + items.length * 90, temperature: 0 },
-      toolConfig: { tools: [{ toolSpec: reviewTool as any }], toolChoice: { tool: { name: 'record_review' } } },
-    }),
+  const res = await withRetry(() =>
+    bedrock.send(
+      new ConverseCommand({
+        modelId: config.reviewModelId,
+        system: [{ text: RUBRIC }],
+        messages: [{ role: 'user', content: [{ text: body }] }],
+        inferenceConfig: { maxTokens: 300 + items.length * 90, temperature: 0 },
+        toolConfig: { tools: [{ toolSpec: reviewTool as any }], toolChoice: { tool: { name: 'record_review' } } },
+      }),
+    ),
   );
+  recordTokens(config.reviewModelId, res.usage);
   const raw = (res.output?.message?.content?.find((c) => c.toolUse)?.toolUse?.input as any)?.verdicts;
   const verdicts: any[] = typeof raw === 'string' ? JSON.parse(raw) : raw ?? [];
   // Fail closed: an item without a verdict is treated as unsuitable.
@@ -146,6 +163,37 @@ export async function reviewForBedtime(items: ReviewItem[]): Promise<ReviewVerdi
     const v = verdicts.find((x) => x.item === i + 1) ?? verdicts[i];
     return v ? { suitable: !!v.suitable, category: String(v.category ?? ''), why: String(v.why ?? '') } : { suitable: false, category: 'no-verdict', why: 'reviewer returned no verdict' };
   });
+}
+
+// ---- image moderation (Amazon Rekognition) ----------------------------------------------------------
+//
+// The text checks above can't see what the image model actually drew, so every illustration is
+// shown to Rekognition before it is saved. The pipeline repaints anything flagged.
+
+/** A moderation label at or above this confidence (0-100) sends a picture back. */
+export const IMAGE_FLAG_CONFIDENCE = 60;
+
+/**
+ * Labels that are expected in this product and not a problem: a child at a swimming lesson or the
+ * beach wears a swimsuit, which Rekognition reports as "Swimwear or Underwear" under "Suggestive".
+ * Nudity, violence and every other category still send the picture back.
+ */
+const EXPECTED_LABEL = /swimwear|underwear/i;
+
+export async function moderateImage(image: Uint8Array): Promise<{ ok: boolean; labels: string[] }> {
+  const res = await withRetry(() =>
+    rekognition.send(new DetectModerationLabelsCommand({ Image: { Bytes: image }, MinConfidence: IMAGE_FLAG_CONFIDENCE })),
+  );
+  record(PRICES.rekognition, 1);
+  const all = (res.ModerationLabels ?? []).filter((l) => (l.Confidence ?? 0) >= IMAGE_FLAG_CONFIDENCE);
+  const flagged = all.filter((l) => {
+    if (EXPECTED_LABEL.test(l.Name ?? '')) return false;
+    // A parent category whose only detected children are expected labels isn't a finding on its own.
+    const children = all.filter((c) => c.ParentName === l.Name);
+    return !(children.length && children.every((c) => EXPECTED_LABEL.test(c.Name ?? '')));
+  });
+  const labels = flagged.map((l) => `${l.Name}(${Math.round(l.Confidence ?? 0)})`);
+  return { ok: labels.length === 0, labels };
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
