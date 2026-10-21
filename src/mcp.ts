@@ -353,13 +353,22 @@ function resolveStory(familyId: string, storyId?: string, hero?: string): { stor
 // ---- server factory (stateless: one per request, scoped to the linked family) ----------------
 
 export function createMcpServer(familyId: string) {
+  // The linked family's story heroes are already known, so the assistant never has to ask who "her" is.
+  const kids = store.childrenOf(familyId);
+  const heroes = kids.length
+    ? ` This family's story ${kids.length === 1 ? 'hero is' : 'heroes are'} ${kids.map((c) => `${c.name} (age ${c.age})`).join(', ')}. ` +
+      (kids.length === 1
+        ? `When the parent says "her", "him", "my daughter", "my son" or "my kid", they mean ${kids[0].name}: don't ask for a name, and don't ask for more details before creating a story; use what was said.`
+        : `Only ask which child if it isn't clear from what was said.`)
+    : '';
   const server = new McpServer(
     { name: 'once-upon-tonight', title: 'Once Upon Tonight', version: '0.1.0' },
     {
       instructions:
         'Once Upon Tonight makes a personalized, illustrated, narrated bedtime story from the day a family just had, then reads it page by page. ' +
         'A parent creates the story (create_tonights_story); at bedtime anyone can open it (open_storybook), turn pages, and choose what happens next. ' +
-        'Stories remember earlier nights, so recurring friends and places come back.',
+        'Stories remember earlier nights, so recurring friends and places come back.' +
+        heroes,
     },
   );
 
