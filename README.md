@@ -3,7 +3,7 @@
 **An Alexa+ add-on (MCP server) that turns a child's day into tonight's bedtime story: written, illustrated, narrated with read-along highlighting, choose-your-path, and remembered night after night.**
 
 > Built for the **Build, Ship, Shape: Amazon Developer Hackathon** · Alexa+ track · AWS Builder & Open Source mini challenges.
-> 🎬 Demo video: _(link)_ · 🌐 Live demo endpoint: `https://d29fplx2av89ja.cloudfront.net/mcp` (demo mode, see [below](#try-the-hosted-demo)) · 🧪 Simulator: [**Countertop**](https://github.com/PRIEST099/countertop) (open source)
+> 🎬 Demo video: https://youtu.be/Lgh42f-NPUk · 🌐 Live demo endpoint: `https://d29fplx2av89ja.cloudfront.net/mcp` (demo mode, see [below](#try-the-hosted-demo)) · 🧪 Simulator: [**Countertop**](https://github.com/PRIEST099/countertop) (open source)
 
 ![Once Upon Tonight on an Echo Show (Countertop simulator)](docs/img/storybook.jpg)
 
