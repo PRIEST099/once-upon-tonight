@@ -498,7 +498,9 @@ export function createMcpServer(familyId: string) {
         );
       }
 
-      const story = createStory(child, { todaysMoments: todays_moments, theme, length: length ?? 'standard' });
+      // Live stories in the hosted demo are short (6 pages), which keeps each one near $0.64.
+      const storyLength = config.aiMode === 'mock' && isLive(child) ? 'short' : (length ?? 'standard');
+      const story = createStory(child, { todaysMoments: todays_moments, theme, length: storyLength });
       if (config.aiMode !== 'mock') store.recordCreation(familyId);
       else if (isLive(child)) store.recordLiveStory();
       return reply(

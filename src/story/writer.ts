@@ -114,6 +114,7 @@ Rules:
 - Reading level (${child.readingLevel}, age ${child.age}): ${levelGuide[child.readingLevel]}
 - Structure: exactly ${shared} shared pages, then a choice between two different, equally lovely paths, then exactly ${branch} pages for each path. Both paths must end well.
 - The last page of each path is a wind-down: slower, sleepy imagery (quiet, warm, cozy), ending by saying goodnight to ${child.name} by name.
+- Let the characters talk: include a few short spoken lines in quotation marks, with who says each one (they are read aloud in each character's own voice).
 - Use the word of the night verbatim exactly once in the shared pages.${usedWords.length ? ` Pick a new word: not ${usedWords.map((x) => `"${x}"`).join(', ')}.` : ''}
 - Continuity: this is one episode in an ongoing series. ${recent.length ? 'Briefly and naturally call back to one earlier episode.' : 'This is the first episode.'}
 Return the story only by calling the write_story tool.`;
