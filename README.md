@@ -128,9 +128,10 @@ Each story stores an itemized cost estimate at list prices ([`src/story/cost.ts`
 `https://d29fplx2av89ja.cloudfront.net/mcp` runs on AWS in **demo mode** (`AI_MODE=mock`):
 - Anyone can link the demo family (**parent@example.com / bedtime**).
 - Every reading tool works.
-- "Make tonight's story" replays a bundled demo story instead of calling paid models.
+- Maya's stories are pre-made: "make tonight's story" for Maya replays a bundled story, free and quick.
+- A child you add gets a **real story** made live with the paid models ("make tonight's story for Zara, she's six…", about 2 minutes), within a shared quota of 3 a day and 10 in all to keep costs down ([`infra/enable-live-demo.sh`](infra/enable-live-demo.sh)).
 
-**Easiest: open https://d3eqnu2zudrdt1.cloudfront.net.** That's a hosted copy of [Countertop](https://github.com/PRIEST099/countertop), already pointed at this endpoint. Press **Link add-on**, allow, then type or hold Space and say "Make tonight's story about her first swimming lesson", "Read my bedtime story" or "How did bedtime go last night?". The hosted Countertop has a shared daily usage limit to keep costs down.
+**Easiest: open https://d3eqnu2zudrdt1.cloudfront.net.** That's a hosted copy of [Countertop](https://github.com/PRIEST099/countertop), already pointed at this endpoint. Press **Link add-on**, allow, then type or hold Space and say "Make tonight's story about her first swimming lesson", "Read my bedtime story" or "How did bedtime go last night?". The hosted demo has shared usage limits to keep costs down.
 
 You can also point your own Countertop at the endpoint (paste the URL, then **Link add-on**), or run its headless check:
 

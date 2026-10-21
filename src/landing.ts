@@ -13,7 +13,7 @@ export function landingPage(opts: { atEndpoint?: boolean } = {}) {
     ? `<p class="note">You opened the MCP endpoint in a browser. It's working: it answers <b>401</b> because Alexa+ and other MCP clients call it with an access token from account linking, not from a browser tab. Here's how to try it.</p>`
     : '';
   const demo = config.demoMode
-    ? `<p>This copy runs in <b>demo mode</b>: anyone can link the demo family, and "make tonight's story" replays a bundled story instead of calling paid models. Everything else works for real.</p>
+    ? `<p>This copy runs in <b>demo mode</b>: anyone can link the demo family. Maya's stories are pre-made and replayed instantly; a child you add ("make tonight's story for Zara, she's six…") gets a real story made with the paid models, within a small shared daily quota.</p>
 <p>Demo family (fictional test account, prefilled on the consent page): <code>parent@example.com</code> / <code>bedtime</code></p>`
     : '';
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
