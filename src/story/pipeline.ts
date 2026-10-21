@@ -244,7 +244,7 @@ async function runMock(story: Story, child: Child, meter: CostMeter) {
   story.progress.total = steps.length + 1;
   for (const [status, line] of steps) {
     update(story, { status }, line);
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, config.mockStepMs));
     tick(story);
   }
   await fs.cp(path.join(seedDir, 'media'), path.join(mediaDir(), story.id), { recursive: true });

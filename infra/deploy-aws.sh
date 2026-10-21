@@ -61,6 +61,8 @@ HOST=0.0.0.0
 PORT=$PORT
 AI_MODE=mock
 DEMO_MODE=true
+# Pace the bundled story's studio steps so visitors can watch the progress.
+MOCK_STEP_MS=5000
 # Only CloudFront can reach the instance (security group), so trust its X-Forwarded-For for rate limits.
 TRUST_PROXY=1
 ALEXA_CLIENT_SECRET=$SECRET
