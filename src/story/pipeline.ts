@@ -71,7 +71,7 @@ async function runBedrock(story: Story, child: Child) {
     console.warn(`[pipeline] draft ${attempt} flagged by ${safety.provider}: ${safety.notes}`);
     if (attempt === 2) throw new Error(`Safety check (${safety.provider}) flagged the story twice: ${safety.notes}`);
     update(story, { status: 'writing' }, 'Making the story a little gentler');
-    request = { ...request, todaysMoments: `${request.todaysMoments}\n(Write this version extra gentle and calm: the previous draft was flagged as too intense for bedtime.)` };
+    request = { ...request, todaysMoments: `${request.todaysMoments}\n(Write this version extra gentle and calm. The previous draft was flagged for bedtime: ${safety.notes ?? 'too intense'})` };
   }
   const allPages = allPagesOf(story);
   const narrationItems = allPages.length + 2; // + choice question + word of the night

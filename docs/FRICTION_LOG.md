@@ -123,3 +123,16 @@ Severity scale: **Blocker** (couldn't proceed as designed) · **High** (hours lo
 - **Severity:** Low (for us); higher for students
 - **Workaround:** Stayed under ~$10 with cheap defaults: Haiku for the assistant, neural Polly, short stories, and a `mock` mode that needs no AWS.
 - **Suggestion:** Reserve a pool for late joiners, or document a "free" path (e.g. mock models).
+
+### 17. Guardrails denied topics flag comforting bedtime stories (15% false positives)
+- **Task:** Block frightening or unsafe content in children's stories with Bedrock Guardrails denied topics.
+- **Steps:** Created "Frightening content" and "Unsafe activities" denied topics, then tested on a 120-case labeled corpus (7 bedtime themes + a red team).
+- **Expected:** Gentle stories pass; scary or unsafe ones are blocked.
+- **Actual:**
+  - 15 of 98 gentle cases were blocked. Comforting a fear of the dark or of monsters was flagged as "frightening". A campfire with grandpa, a bike with a helmet, medicine measured by a parent, and "golden sparkles floated up like tiny stars" were flagged as "unsafe activities".
+  - Narrowing the definitions didn't fix it.
+  - Checking a whole story as one text blocked stories whose pages passed individually.
+  - It surfaced during our demo recording: a gentle swimming-lesson story was rejected twice and the take was lost.
+- **Severity:** High (it broke the core use case: comforting a child's worries)
+- **Workaround:** Guardrails kept for content filters + prompt attack (0 false positives), plus a rubric-based review by Claude Haiku on Bedrock. That scores 184/184 on dev + held-out sets ([eval/safety](../eval/safety/README.md)).
+- **Suggestion:** "Allowed context" examples for denied topics, a children's-content preset, and a confidence score for topic matches so builders can tune the threshold.

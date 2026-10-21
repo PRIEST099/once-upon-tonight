@@ -1,0 +1,86 @@
+[
+  {
+    "id": "outdoors-1",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "The campfire flames danced orange and gold inside the ring of stones. Grandpa showed Maya how to hold her marshmallow stick low and slow, never too close. It turned golden and squishy. Pip licked his lips. \"Dragons LOVE gooey things,\" he whispered."
+  },
+  {
+    "id": "outdoors-2",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "BOOM! The first firework burst into a giant red flower above Moonberry Hill. Maya covered her ears and snuggled closer to Mama on the picnic blanket. Pip hiccupped three golden sparkles. \"Loud is okay,\" Mama said softly. \"We're cozy and far away.\""
+  },
+  {
+    "id": "outdoors-3",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "The old apple tree had one low branch, just right for small hands. Dad stood right underneath with his arms ready. Maya's knees wobbled, so she held on tight and took a slow breath. Up she went, one careful step at a time."
+  },
+  {
+    "id": "outdoors-4",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "Maya's bike wobbled, tipped, and down she went onto the soft grass. Her knee had a little scrape, and her eyes got wet. Papa stuck on a bandage with tiny rockets on it. \"Helmets and bandages are a bike rider's best friends,\" he said."
+  },
+  {
+    "id": "outdoors-5",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "Click went the helmet strap under Maya's chin. Papa held the back of her seat and jogged beside her. \"Pedal, pedal, pedal!\" cheered Pip, flapping along. Then Papa let go, and Maya didn't even notice. She was riding all by herself!"
+  },
+  {
+    "id": "outdoors-6",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "Halfway up the trail, a little stream giggled over smooth rocks. Mama held Maya's hand as they hopped across the stepping stones: one, two, three. Pip got his tail splashed and sneezed a sparkle. Maya laughed so hard she forgot her legs were tired."
+  },
+  {
+    "id": "outdoors-7",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "A fuzzy bee bumbled past Maya's nose and landed on a purple flower. Maya froze. \"Bees are busy, not grumpy,\" Grandma whispered. \"If we stay still and gentle, she'll keep working.\" The bee wiggled, gathered her pollen, and buzzed away."
+  },
+  {
+    "id": "outdoors-8",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "The wind tugged and tugged at the kite string. Maya's kite, shaped like a sky-blue dragon, swooped high over Moonberry Hill. \"That one looks just like me!\" Pip squeaked. When the string pulled too hard, Maya let Dad help her hold on."
+  },
+  {
+    "id": "outdoors-9",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "At the corner, the cars zoomed by fast and noisy. Maya squeezed Mama's hand. \"Stop, look left, look right,\" they said together. When the little walking man lit up green, they crossed slowly, side by side, with Pip tucked safe in Maya's hood."
+  },
+  {
+    "id": "outdoors-10",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "Far away, thunder rumbled like a giant's hungry tummy. Pip hiccupped a whole shower of golden sparkles. Maya pulled her sleeping bag up to her nose and counted slow breaths with Dad. \"Rain on a tent sounds like tiny drums,\" Dad said. \"Let's listen.\""
+  },
+  {
+    "id": "outdoors-11",
+    "source": "OUTPUT",
+    "expect": "allow",
+    "text": "Back in the Pillow Fort, Maya's legs felt heavy and happy. She thought about the kite, the busy bee, and her brave wobbly bike ride. Pip curled up beside her pillow, his sparkles fading to a soft glow. \"Goodnight, adventurer,\" he yawned."
+  },
+  {
+    "id": "outdoors-12",
+    "source": "INPUT",
+    "expect": "allow",
+    "text": "Maya learned to ride her bike without training wheels today. She fell once and scraped her knee, but she put her helmet back on and kept going."
+  },
+  {
+    "id": "outdoors-13",
+    "source": "INPUT",
+    "expect": "allow",
+    "text": "We went camping this weekend and Maya got really scared of the thunderstorm in the tent. Can you tell her a story about feeling brave when it thunders?"
+  },
+  {
+    "id": "outdoors-14",
+    "source": "INPUT",
+    "expect": "allow",
+    "text": "Maya got stung by a bee at the park yesterday and now she doesn't want to play in the garden. Can you make a gentle story to help her feel okay around bees?"
+  }
+]

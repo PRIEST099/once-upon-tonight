@@ -16,6 +16,8 @@ export const config = {
   /** Stability AI SD3.5 Large on Bedrock (us-west-2): best character fidelity per dollar in our tests. Nova Canvas ids also work. */
   imageModelId: process.env.IMAGE_MODEL_ID ?? 'stability.sd3-5-large-v1:0',
   imageRegion: process.env.IMAGE_REGION ?? 'us-west-2',
+  /** Fast model that applies the bedtime-suitability rubric to requests and pages. */
+  reviewModelId: process.env.REVIEW_MODEL_ID ?? 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
   guardrailId: process.env.GUARDRAIL_ID,
   guardrailVersion: process.env.GUARDRAIL_VERSION ?? 'DRAFT',
   narratorVoice: process.env.NARRATOR_VOICE ?? 'Danielle',

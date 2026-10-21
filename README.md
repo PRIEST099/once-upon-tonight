@@ -31,7 +31,7 @@ A minute later there's an original picture book starring Maya and her sidekick P
 | 🗺️ **A story world that remembers** | Sidekick, places, friends and past episodes carry over, so the next story calls back to last night. |
 | 🌙 **Sleep-friendly** | A dark UI, a slow wind-down last page, and the screen dims after "The End". |
 | 👪 **Parent-run and private** | The parent links the account, sets a nickname, favourites and *never-mention* topics, gets a morning recap, and can say *"forget the story world"*. |
-| 🛡️ **Safety by design** | An Amazon Bedrock Guardrail checks the parent's request and every page. Flagged drafts are rewritten gentler, never shown. |
+| 🛡️ **Safety by design** | Two layers on every request and page: Amazon Bedrock Guardrails (content filters + prompt-attack detection) and a bedtime-suitability review by Claude on Bedrock against an explicit rubric. Flagged drafts are rewritten gentler, never shown. **184/184 correct on our labeled safety set, including 64 held-out cases** ([eval](eval/safety/README.md)). |
 
 ## How it uses Alexa+ and MCP
 
@@ -79,9 +79,9 @@ flowchart LR
   UI -- "tools/call via host bridge" --> S
   S -- "ui:// resource + tool results" --> UI
   S --> Q["Story pipeline (background)"]
-  Q --> G1["Amazon Bedrock Guardrails<br/>check the parent's request"]
+  Q --> G1["Amazon Bedrock Guardrails + bedtime review<br/>check the parent's request"]
   G1 --> W["Amazon Bedrock · Claude Sonnet 4.6<br/>write a branching story (forced tool call)"]
-  W --> G2["Amazon Bedrock Guardrails + avoid-list<br/>check every page; rewrite gentler if flagged"]
+  W --> G2["Guardrails + bedtime review (Claude Haiku)<br/>check every page; rewrite gentler if flagged"]
   G2 --> I["Amazon Bedrock · Stability SD3.5 Large<br/>paint every page"]
   G2 --> N["Amazon Polly (neural)<br/>narration + word speech marks"]
   I & N --> M["Story world memory<br/>(episodes, places, friends)"]
@@ -92,7 +92,8 @@ flowchart LR
 | Service | Used for | Where |
 |---|---|---|
 | **Amazon Bedrock**: Converse API, Claude Sonnet 4.6 | Writes the branching story as structured JSON via a forced tool call | [`src/story/writer.ts`](src/story/writer.ts) |
-| **Amazon Bedrock Guardrails**: `ApplyGuardrail` | Content filters, denied topics (frightening content, unsafe activities), prompt-attack filter on parent input, profanity list. Created by script. | [`src/story/safety.ts`](src/story/safety.ts), [`scripts/create-guardrail.ts`](scripts/create-guardrail.ts) |
+| **Amazon Bedrock Guardrails**: `ApplyGuardrail` | Content filters, prompt-attack filter on the parent's request, profanity list. Created by script, checked per page. | [`src/story/safety.ts`](src/story/safety.ts), [`scripts/create-guardrail.ts`](scripts/create-guardrail.ts) |
+| **Amazon Bedrock**: Converse, Claude Haiku 4.5 | Bedtime-suitability review: an explicit rubric that knows *comforting* a fear is fine but *creating* one isn't. Measured against Guardrails denied topics on 184 labeled cases ([eval](eval/safety/README.md)). | [`src/story/safety.ts`](src/story/safety.ts), [`scripts/safety-eval.ts`](scripts/safety-eval.ts) |
 | **Amazon Bedrock**: InvokeModel, Stability SD3.5 Large (us-west-2) | One watercolor illustration per page, rate-limit aware | [`src/story/illustrator.ts`](src/story/illustrator.ts) |
 | **Amazon Polly**: neural `Danielle` + word speech marks | Narration and read-along timings (byte→char offset mapping) | [`src/story/narrator.ts`](src/story/narrator.ts) |
 | **Amazon Bedrock**: Claude Haiku 4.5 + **Amazon Polly** | The simulated Alexa+ brain and voice in Countertop | [countertop](https://github.com/PRIEST099/countertop) |
@@ -124,6 +125,12 @@ git clone https://github.com/PRIEST099/countertop && cd countertop && npm instal
 # open http://localhost:5310 → Link add-on (demo family: parent@example.com / bedtime) → hold Space and talk
 ```
 
+**Safety evaluation:** 184 labeled cases (dev + held-out); see [`eval/safety`](eval/safety/README.md):
+
+```bash
+npm run eval:safety
+```
+
 **End-to-end test:** account linking + the full bedtime flow, with every call timed against Alexa+'s 500 ms budget:
 
 ```bash
@@ -149,7 +156,8 @@ src/
   mcp.ts             MCP server: 11 tools, MCP App resource, three-layer results
   auth.ts            OAuth 2.1 authorization server + resource-server guard (Alexa+ shaped)
   story/pipeline.ts  Background agentic pipeline: guard → write → check → paint ∥ narrate → remember
-  story/*.ts         Bedrock writer, Guardrails, Stability illustrator, Polly narrator
+  story/*.ts         Bedrock writer, safety (Guardrails + review), Stability illustrator, Polly narrator
+eval/safety/         184 labeled bedtime-safety cases + results
   store.ts           JSON-file store (seeded demo family)
 app/                 MCP App (vanilla TS → one self-contained HTML via Vite)
 addon-package/       Alexa+ add-on manifest (addon.json)

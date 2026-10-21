@@ -15,7 +15,9 @@
     "smoke": "tsx scripts/smoke-test.ts",
     "check-aws": "tsx scripts/check-aws.ts",
     "export-seed": "tsx scripts/export-seed.ts",
-    "create-guardrail": "tsx scripts/create-guardrail.ts"
+    "create-guardrail": "tsx scripts/create-guardrail.ts",
+    "eval:safety": "tsx scripts/safety-eval.ts eval/safety/dev/*.json eval/safety/heldout/*.json",
+    "eval:guardrail": "tsx scripts/guardrail-probe.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.1154.0",

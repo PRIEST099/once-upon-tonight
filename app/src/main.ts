@@ -65,9 +65,20 @@ const audio = new Audio();
 audio.preload = 'auto';
 let raf = 0;
 let onEnded: (() => void) | null = null;
-audio.addEventListener('ended', () => onEnded?.());
+let clipOn = false;
+/** Tell the host when narration starts/stops (hosts can use it for captions, ducking or recordings). */
+function audioEvent(event: 'start' | 'stop') {
+  if ((event === 'start') === clipOn) return;
+  clipOn = event === 'start';
+  quiet(app.sendLog({ level: 'info', logger: 'audio', data: { event, url: audio.src, at: Date.now(), offsetMs: Math.round(audio.currentTime * 1000) } }));
+}
+audio.addEventListener('ended', () => {
+  audioEvent('stop');
+  onEnded?.();
+});
 
 function stopAudio() {
+  audioEvent('stop');
   audio.pause();
   cancelAnimationFrame(raf);
   onEnded = null;
@@ -87,6 +98,7 @@ async function playClip(url: string | undefined, spans: HTMLElement[] = [], mark
   };
   try {
     await audio.play();
+    audioEvent('start');
     raf = requestAnimationFrame(tick);
     return true;
   } catch {
