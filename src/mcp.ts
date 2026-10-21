@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import { config } from './config.js';
 import * as store from './store.js';
-import { createStory } from './story/pipeline.js';
+import { isLive, createStory } from './story/pipeline.js';
 import { rebaseMediaUrl } from './media.js';
 import type { Child, Page, ReadingLevel, Story } from './types.js';
 
@@ -359,7 +359,9 @@ export function createMcpServer(familyId: string) {
     ? ` This family's story ${kids.length === 1 ? 'hero is' : 'heroes are'} ${kids.map((c) => `${c.name} (age ${c.age})`).join(', ')}. ` +
       (kids.length === 1
         ? `When the parent says "her", "him", "my daughter", "my son" or "my kid", they mean ${kids[0].name}: don't ask for a name, and don't ask for more details before creating a story; use what was said.`
-        : `Only ask which child if it isn't clear from what was said.`) +
+        : config.demoMode
+          ? `If the parent doesn't name a child, it's ${kids[0].name}; don't ask which child.`
+          : `Only ask which child if it isn't clear from what was said.`) +
       ' To make a story for a child who is not listed yet, call create_tonights_story with their name as hero and their age as hero_age; they are added to the story world.'
     : '';
   const server = new McpServer(
@@ -425,9 +427,21 @@ export function createMcpServer(familyId: string) {
     },
     async ({ todays_moments, theme, length, hero, hero_age, hero_looks, hero_kind }) => {
       let child = store.resolveChild(familyId, hero);
+      // Hosted demo: Maya's stories are pre-made; a hero a visitor adds gets a real story, within a shared quota.
+      const demoLive = config.aiMode === 'mock' && config.liveNewHeroes;
+      const quota = store.liveStoryCounts();
+      const quotaLeft = quota.lastDay < config.liveStoriesPerDay && quota.total < config.liveStoriesTotal;
+      const wantsLive = demoLive && (child ? isLive(child) : !!hero);
+      if (wantsLive && !quotaLeft) {
+        const say =
+          quota.total >= config.liveStoriesTotal
+            ? `This public demo has used all of its live stories, which are capped to keep hosting costs down. I can make Maya's story instead, or you can run Once Upon Tonight yourself to make stories for anyone.`
+            : `This public demo has made its ${config.liveStoriesPerDay} live stories for today, which is the limit to keep hosting costs down. Try again tomorrow, or I can make Maya's story now.`;
+        return reply(say, { ok: false, liveQuotaReached: true, newStoryStarted: false, heroes: store.childrenOf(familyId).map((c) => c.name) }, { view: 'message', title: 'Live stories are used up for now', body: say });
+      }
       if (!child && hero) {
         // A child who isn't in the story world yet: add them, as long as we know their age.
-        if (config.aiMode === 'mock') {
+        if (config.aiMode === 'mock' && !demoLive) {
           const only = store.childrenOf(familyId).map((c) => c.name).join(' and ') || 'Maya';
           return reply(
             `This public demo only has ${only}, because its stories are pre-made. In the full version, a parent just says "make tonight's story for ${hero}, ${hero_kind === 'girl' ? "she's" : hero_kind === 'boy' ? "he's" : "they're"} ${hero_age ?? 7}" and ${hero} joins the story world with their own sidekick. Want me to make one for ${only} instead?`,
@@ -435,7 +449,7 @@ export function createMcpServer(familyId: string) {
           );
         }
         if (!hero_age) return fail(`${hero} isn't in the story world yet. Ask the parent how old ${hero} is, then call create_tonights_story again with hero_age (and hero_looks or hero_kind if they said).`);
-        child = store.addChild(familyId, { name: hero, age: hero_age, looks: hero_looks, kind: hero_kind });
+        child = store.addChild(familyId, { name: hero, age: hero_age, looks: hero_looks, kind: hero_kind }, { makeRoom: config.demoMode });
         if (!child) return fail(`This family already has ${store.MAX_HEROES} story heroes, which is the most I can keep.`);
       }
       if (!child) return fail('No story hero is set up yet.');
@@ -486,6 +500,7 @@ export function createMcpServer(familyId: string) {
 
       const story = createStory(child, { todaysMoments: todays_moments, theme, length: length ?? 'standard' });
       if (config.aiMode !== 'mock') store.recordCreation(familyId);
+      else if (isLive(child)) store.recordLiveStory();
       return reply(
         `I'm making tonight's story for ${child.name} now. It will be ready in a couple of minutes, so it's all set for bedtime.`,
         { storyId: story.id, hero: child.name, status: story.status, readyInSeconds: 150 },

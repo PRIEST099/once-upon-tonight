@@ -35,6 +35,7 @@ if aws iam get-role --role-name "$NAME-ec2" >/dev/null 2>&1; then
   aws iam remove-role-from-instance-profile --instance-profile-name "$NAME-ec2" --role-name "$NAME-ec2" || true
   aws iam delete-instance-profile --instance-profile-name "$NAME-ec2" || true
   aws iam delete-role-policy --role-name "$NAME-ec2" --policy-name countertop-assistant 2>/dev/null || true
+  aws iam delete-role-policy --role-name "$NAME-ec2" --policy-name live-stories 2>/dev/null || true
   aws iam detach-role-policy --role-name "$NAME-ec2" --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   aws iam delete-role --role-name "$NAME-ec2"
 fi

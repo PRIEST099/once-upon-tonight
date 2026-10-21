@@ -27,6 +27,10 @@ import { withRetry } from './retry.js';
  * Every AWS call reports its usage to a per-story meter, so a finished story carries an estimate
  * of what it cost to make (story.cost) and how long it took (story.generationMs).
  */
+/** Whether this child's stories are made with the paid models: always in live mode; in the hosted demo, for
+ *  heroes a visitor added (Maya's stay pre-made). */
+export const isLive = (child: Child) => config.aiMode !== 'mock' || (config.liveNewHeroes && child.id !== store.DEMO_CHILD_ID);
+
 export function createStory(child: Child, request: StoryRequest): Story {
   const story: Story = {
     id: store.newId('story'),
@@ -41,7 +45,7 @@ export function createStory(child: Child, request: StoryRequest): Story {
   };
   store.putStory(story);
   const meter = new CostMeter();
-  const run = config.aiMode === 'mock' ? runMock : runBedrock;
+  const run = isLive(child) ? runBedrock : runMock;
   metered(meter, () => run(story, child, meter)).catch((err) => {
     if (err instanceof Cancelled || !store.getStory(story.id)) {
       // The parent deleted the story world mid-generation: stop, and remove anything written since.
@@ -57,7 +61,7 @@ export function createStory(child: Child, request: StoryRequest): Story {
 
 /** What the story cost so far, and how long since it was asked for. No AWS is called in mock mode. */
 const spent = (story: Story, meter: CostMeter): Pick<Story, 'cost' | 'generationMs'> => ({
-  ...(config.aiMode !== 'mock' && { cost: meter.summary() }),
+  ...(meter.summary().usd > 0 && { cost: meter.summary() }),
   generationMs: Date.now() - Date.parse(story.createdAt),
 });
 

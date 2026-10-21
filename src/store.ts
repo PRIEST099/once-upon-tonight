@@ -17,6 +17,8 @@ interface Db {
   tokens: Record<string, TokenRecord>;
   /** Per-family timestamps of paid story creations (cost guard); deliberately survives story deletion. */
   creations?: Record<string, number[]>;
+  /** Hosted demo: when each live story for a new hero was started (all visitors together; never trimmed). */
+  liveStories?: number[];
 }
 
 const dbFile = path.join(config.dataDir, 'db.json');
@@ -171,9 +173,19 @@ const SIDEKICKS = [
 export const MAX_HEROES = 6;
 
 /** A parent adds a story hero (name, age, how they look); the reading level comes from the age. */
-export function addChild(familyId: string, hero: { name: string; age: number; looks?: string; kind?: 'girl' | 'boy' | 'child' }): Child | undefined {
+export function addChild(
+  familyId: string,
+  hero: { name: string; age: number; looks?: string; kind?: 'girl' | 'boy' | 'child' },
+  opts: { makeRoom?: boolean } = {},
+): Child | undefined {
   const family = db.families[familyId];
-  if (!family || family.childIds.length >= MAX_HEROES) return undefined;
+  if (!family) return undefined;
+  // The public demo family is shared by every visitor: make room by dropping the oldest hero someone added.
+  if (family.childIds.length >= MAX_HEROES && opts.makeRoom) {
+    const oldest = family.childIds.find((id) => id !== DEMO_CHILD_ID);
+    if (oldest) removeChild(oldest);
+  }
+  if (family.childIds.length >= MAX_HEROES) return undefined;
   const age = Math.max(2, Math.min(12, Math.round(hero.age)));
   const child: Child = {
     id: newId('child'),
@@ -229,6 +241,27 @@ export function recordCreation(familyId: string) {
   save();
 }
 export const creationsSince = (familyId: string, ms: number) => (db.creations?.[familyId] ?? []).filter((t) => t > Date.now() - ms).length;
+
+/** Hosted demo cost guard: live stories started by all visitors, in the last 24 hours and ever. */
+export function liveStoryCounts() {
+  const log = db.liveStories ?? [];
+  return { lastDay: log.filter((t) => t > Date.now() - 24 * 60 * 60 * 1000).length, total: log.length };
+}
+export function recordLiveStory() {
+  (db.liveStories ??= []).push(Date.now());
+  save();
+}
+
+/** Remove a story hero and everything about them (stories, pictures, narration). */
+export function removeChild(childId: string) {
+  const child = db.children[childId];
+  if (!child) return;
+  deleteStoriesFor(childId);
+  const family = db.families[child.familyId];
+  if (family) family.childIds = family.childIds.filter((id) => id !== childId);
+  delete db.children[childId];
+  save();
+}
 
 // ---- oauth ---------------------------------------------------------------------------
 

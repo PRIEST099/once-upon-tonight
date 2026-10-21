@@ -49,6 +49,13 @@ export const config = {
   /** Client secret Alexa+ uses during account linking (configured in addon-package/addon.json). */
   alexaClientSecret: process.env.ALEXA_CLIENT_SECRET ?? DEFAULT_ALEXA_CLIENT_SECRET,
   /** Prefill the seeded parent's email/password on the sign-in page. On by default only for a localhost PUBLIC_URL. */
+  /**
+   * Hosted demo (AI_MODE=mock): stories for heroes a visitor adds are made live, with paid models, within
+   * LIVE_STORIES_PER_DAY (all visitors, rolling 24 h) and LIVE_STORIES_TOTAL (ever). Maya's stay pre-made.
+   */
+  liveNewHeroes: process.env.LIVE_NEW_HEROES === 'true',
+  liveStoriesPerDay: Number(process.env.LIVE_STORIES_PER_DAY ?? 3),
+  liveStoriesTotal: Number(process.env.LIVE_STORIES_TOTAL ?? 10),
   /** Mock mode: how long each studio step takes, so the progress is visible (the hosted demo uses a slower pace). */
   mockStepMs: Number(process.env.MOCK_STEP_MS ?? 1200),
   demoMode: (process.env.DEMO_MODE ?? String(publicIsLocal)) === 'true',
