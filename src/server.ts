@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
 import { config, DEFAULT_ALEXA_CLIENT_SECRET, MCP_PATH, originAllowed } from './config.js';
-import { loadDb } from './store.js';
+import { flush, loadDb } from './store.js';
 import { authRouter, ensureBuiltInClients, requireMcpAuth } from './auth.js';
 import { createMcpServer, loadAppBundle, watchAppBundle } from './mcp.js';
 import { mediaDir } from './media.js';
@@ -103,3 +103,11 @@ app.listen(config.port, config.host, () => {
     `🌙 Once Upon Tonight listening on ${config.host}:${config.port} as ${config.publicUrl}  (MCP at ${MCP_PATH}, AI_MODE=${config.aiMode}${config.demoMode ? ', demo mode' : ''})`,
   );
 });
+
+// Stopping (Ctrl-C, systemd restart): write any pending database change first.
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    flush();
+    process.exit(0);
+  });
+}

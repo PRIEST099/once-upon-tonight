@@ -359,7 +359,8 @@ export function createMcpServer(familyId: string) {
     ? ` This family's story ${kids.length === 1 ? 'hero is' : 'heroes are'} ${kids.map((c) => `${c.name} (age ${c.age})`).join(', ')}. ` +
       (kids.length === 1
         ? `When the parent says "her", "him", "my daughter", "my son" or "my kid", they mean ${kids[0].name}: don't ask for a name, and don't ask for more details before creating a story; use what was said.`
-        : `Only ask which child if it isn't clear from what was said.`)
+        : `Only ask which child if it isn't clear from what was said.`) +
+      ' To make a story for a child who is not listed yet, call create_tonights_story with their name as hero and their age as hero_age; they are added to the story world.'
     : '';
   const server = new McpServer(
     { name: 'once-upon-tonight', title: 'Once Upon Tonight', version: '0.1.0' },
@@ -404,7 +405,8 @@ export function createMcpServer(familyId: string) {
         '"make tonight\'s story about the zoo trip", "Maya lost her first tooth today, make a story about it", or ' +
         '"she\'s nervous about the dentist tomorrow". Writing, illustrating and narrating takes a couple of minutes and runs in the background; ' +
         'reply that it will be ready by bedtime. Pass everything the parent said about the day in todays_moments. ' +
-        'Safe to repeat: if a story for this child is already being made, or the same request was made in the last few minutes, that story is returned instead of a new one.',
+        'Safe to repeat: if a story for this child is already being made, or the same request was made in the last few minutes, that story is returned instead of a new one. ' +
+        'For a child who is not in the story world yet, pass their name as hero plus hero_age (and hero_looks or hero_kind if the parent said); they are added as a new story hero with their own sidekick.',
       inputSchema: z.object({
         todays_moments: z
           .string()
@@ -414,13 +416,29 @@ export function createMcpServer(familyId: string) {
         theme: z.enum(THEMES).optional().describe('Optional gentle theme or value for the story.'),
         length: z.enum(['short', 'standard']).optional().describe('short ≈ 3 minutes, standard ≈ 5 minutes. Default standard.'),
         hero: z.string().max(40).optional().describe("Which child's story this is, by the nickname the parent set up. Omit if there is only one."),
+        hero_age: z.number().int().min(2).max(12).optional().describe('Only for a child who is new to the story world: their age. The child is added as a new story hero.'),
+        hero_looks: z.string().max(200).optional().describe('Only for a new child, if the parent said: what they look like (hair, favourite pajamas), used for the pictures.'),
+        hero_kind: z.enum(['girl', 'boy', 'child']).optional().describe('Only for a new child: girl, boy, or child. Picks the voice their lines are read in.'),
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
       _meta: uiMeta(),
     },
-    async ({ todays_moments, theme, length, hero }) => {
-      const child = store.resolveChild(familyId, hero);
-      if (!child) return fail(hero ? `I don't have a story hero named ${hero}.` : 'No story hero is set up yet.');
+    async ({ todays_moments, theme, length, hero, hero_age, hero_looks, hero_kind }) => {
+      let child = store.resolveChild(familyId, hero);
+      if (!child && hero) {
+        // A child who isn't in the story world yet: add them, as long as we know their age.
+        if (config.aiMode === 'mock') {
+          const only = store.childrenOf(familyId).map((c) => c.name).join(' and ') || 'Maya';
+          return reply(
+            `This public demo only has ${only}, because its stories are pre-made. In the full version, a parent just says "make tonight's story for ${hero}, ${hero_kind === 'girl' ? "she's" : hero_kind === 'boy' ? "he's" : "they're"} ${hero_age ?? 7}" and ${hero} joins the story world with their own sidekick. Want me to make one for ${only} instead?`,
+            { hero, added: false, reason: 'demo mode has pre-made stories only', heroes: store.childrenOf(familyId).map((c) => c.name) },
+          );
+        }
+        if (!hero_age) return fail(`${hero} isn't in the story world yet. Ask the parent how old ${hero} is, then call create_tonights_story again with hero_age (and hero_looks or hero_kind if they said).`);
+        child = store.addChild(familyId, { name: hero, age: hero_age, looks: hero_looks, kind: hero_kind });
+        if (!child) return fail(`This family already has ${store.MAX_HEROES} story heroes, which is the most I can keep.`);
+      }
+      if (!child) return fail('No story hero is set up yet.');
       const now = Date.now();
       const age = (s: Story) => now - Date.parse(s.createdAt);
       const studio = { invoking: 'Opening the story studio…', invoked: 'Story studio' };
@@ -457,7 +475,7 @@ export function createMcpServer(familyId: string) {
       const today = config.aiMode === 'mock' ? 0 : store.creationsSince(familyId, DAY_MS);
       if (today >= MAX_STORIES_PER_DAY) {
         const say =
-          `That's ${MAX_STORIES_PER_DAY} new stories today, which is the daily limit, so the next new one will have to wait until tomorrow. ` +
+          `That's ${MAX_STORIES_PER_DAY} new ${MAX_STORIES_PER_DAY === 1 ? 'story' : 'stories'} today, which is the daily limit, so the next new one will have to wait until tomorrow. ` +
           `I can read one of ${child.name}'s stories again instead. Just ask what stories you have.`;
         return reply(
           say,

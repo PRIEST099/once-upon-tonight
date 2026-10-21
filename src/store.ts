@@ -116,6 +116,13 @@ export function save() {
   saveTimer = setTimeout(saveNow, 150);
 }
 
+/** Write any pending change now (on shutdown, so a restart right after a change doesn't lose it). */
+export function flush() {
+  if (!db) return;
+  clearTimeout(saveTimer);
+  saveNow();
+}
+
 export const newId = (prefix: string) => `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 
 // ---- families & children -------------------------------------------------------------
@@ -153,6 +160,36 @@ export function resolveChild(familyId: string, name?: string): Child | undefined
   if (!name) return kids[0];
   const needle = name.toLowerCase().replace(/['’]s\b/, '').trim();
   return kids.find((k) => k.name.toLowerCase() === needle) ?? kids.find((k) => needle.includes(k.name.toLowerCase()));
+}
+
+/** Sidekicks for new story heroes (each hero gets their own; the parent can rename them later). */
+const SIDEKICKS = [
+  { name: 'Biscuit', description: 'a small round orange fox cub with a fluffy white-tipped tail and big curious eyes; when Biscuit is happy, his tail swishes so fast it blurs' },
+  { name: 'Moss', description: 'a tiny green turtle with a smooth mossy shell and a sleepy smile; Moss hums softly when he feels brave' },
+  { name: 'Clementine', description: 'a little white owl with round golden glasses and soft speckled wings; she hoots a tiny tune when she has an idea' },
+];
+export const MAX_HEROES = 6;
+
+/** A parent adds a story hero (name, age, how they look); the reading level comes from the age. */
+export function addChild(familyId: string, hero: { name: string; age: number; looks?: string; kind?: 'girl' | 'boy' | 'child' }): Child | undefined {
+  const family = db.families[familyId];
+  if (!family || family.childIds.length >= MAX_HEROES) return undefined;
+  const age = Math.max(2, Math.min(12, Math.round(hero.age)));
+  const child: Child = {
+    id: newId('child'),
+    familyId,
+    name: hero.name.trim().replace(/^./, (c) => c.toUpperCase()),
+    age,
+    readingLevel: age <= 5 ? 'pre-reader' : age <= 7 ? 'early-reader' : 'independent-reader',
+    appearance: hero.looks?.trim() || `a ${age}-year-old ${hero.kind && hero.kind !== 'child' ? hero.kind : 'child'} in cozy pajamas`,
+    favoriteThings: [],
+    avoid: [],
+    world: { sidekick: { ...SIDEKICKS[family.childIds.length % SIDEKICKS.length] }, recurringCharacters: [], places: [], episodes: [] },
+  };
+  db.children[child.id] = child;
+  family.childIds.push(child.id);
+  save();
+  return child;
 }
 
 export function updateChild(child: Child) {
