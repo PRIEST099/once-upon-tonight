@@ -2,13 +2,13 @@ import { SynthesizeSpeechCommand, type Engine, type VoiceId } from '@aws-sdk/cli
 import { polly } from './aws.js';
 import { PRICES, record } from './cost.js';
 import { config } from '../config.js';
-import type { SpeechMark } from '../types.js';
+import type { SpeechMark, VoiceLine } from '../types.js';
 
-async function synth(text: string, format: 'mp3' | 'json', engine: string) {
+async function synth(text: string, format: 'mp3' | 'json', engine: string, voice = config.narratorVoice) {
   const res = await polly.send(
     new SynthesizeSpeechCommand({
       Text: text,
-      VoiceId: config.narratorVoice as VoiceId,
+      VoiceId: voice as VoiceId,
       Engine: engine as Engine,
       OutputFormat: format,
       ...(format === 'json' && { SpeechMarkTypes: ['word'] }),
@@ -38,14 +38,25 @@ function byteToCharIndex(text: string) {
  * Narrate one page: an MP3 plus word-level speech marks so the storybook can highlight each word
  * as it is read (read-along support for early readers).
  */
-export async function narrate(text: string): Promise<{ audio: Uint8Array; marks: SpeechMark[] }> {
-  const audio = await synth(text, 'mp3', config.narratorEngine);
+export async function narrate(text: string, lines?: VoiceLine[]): Promise<{ audio: Uint8Array; marks: SpeechMark[] }> {
+  if (lines?.length) {
+    try {
+      return await narrateLines(text, lines);
+    } catch (err) {
+      console.warn('[narrator] character voices failed; narrator only', err);
+    }
+  }
+  return narrateOne(text, config.narratorVoice);
+}
+
+async function narrateOne(text: string, voice: string): Promise<{ audio: Uint8Array; marks: SpeechMark[] }> {
+  const audio = await synth(text, 'mp3', config.narratorEngine, voice);
   let raw: Uint8Array;
   try {
-    raw = await synth(text, 'json', config.narratorEngine);
+    raw = await synth(text, 'json', config.narratorEngine, voice);
   } catch {
     // Some engines don't return speech marks; fall back to the neural engine for timings.
-    raw = await synth(text, 'json', 'neural');
+    raw = await synth(text, 'json', 'neural', voice);
   }
   const toChar = byteToCharIndex(text);
   const marks = new TextDecoder()
@@ -56,4 +67,57 @@ export async function narrate(text: string): Promise<{ audio: Uint8Array; marks:
     .filter((m) => m.type === 'word')
     .map((m) => ({ time: m.time, start: toChar(m.start), end: toChar(m.end), value: m.value }));
   return { audio, marks };
+}
+
+/**
+ * A page read by several voices: each line is spoken on its own, the MP3s are joined, and each line's word
+ * timings are moved by the length of the audio before it (and its character offsets by where it starts).
+ */
+async function narrateLines(text: string, lines: VoiceLine[]) {
+  const spoken = lines.filter((l) => /[\p{L}\p{N}]/u.test(text.slice(l.start, l.end))); // skip bare punctuation
+  const parts = await Promise.all(spoken.map((l) => narrateOne(text.slice(l.start, l.end).trim(), l.voice)));
+  const marks: SpeechMark[] = [];
+  let ms = 0;
+  parts.forEach((p, i) => {
+    const slice = text.slice(spoken[i].start, spoken[i].end);
+    const lead = spoken[i].start + (slice.length - slice.trimStart().length);
+    for (const m of p.marks) marks.push({ ...m, time: m.time + ms, start: m.start + lead, end: m.end + lead });
+    ms += mp3DurationMs(p.audio);
+  });
+  const audio = new Uint8Array(parts.reduce((n, p) => n + p.audio.length, 0));
+  let at = 0;
+  for (const p of parts) {
+    audio.set(p.audio, at);
+    at += p.audio.length;
+  }
+  return { audio, marks };
+}
+
+/** Length of an MP3 from its frame headers (Polly writes constant-rate MPEG audio without tags). */
+export function mp3DurationMs(bytes: Uint8Array) {
+  const BITRATES = { 1: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], 2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160] };
+  const RATES = { 1: [44100, 48000, 32000], 2: [22050, 24000, 16000], 2.5: [11025, 12000, 8000] };
+  let i = 0;
+  let seconds = 0;
+  while (i + 4 <= bytes.length) {
+    if (bytes[i] !== 0xff || (bytes[i + 1] & 0xe0) !== 0xe0) {
+      i++;
+      continue;
+    }
+    const v = (bytes[i + 1] >> 3) & 3; // 3 = MPEG-1, 2 = MPEG-2, 0 = MPEG-2.5
+    const version = v === 3 ? 1 : v === 2 ? 2 : v === 0 ? 2.5 : 0;
+    const layer = (bytes[i + 1] >> 1) & 3; // 1 = Layer III
+    const kbps = version ? BITRATES[version === 1 ? 1 : 2][(bytes[i + 2] >> 4) & 15] : 0;
+    const rate = version ? RATES[version as 1 | 2 | 2.5][(bytes[i + 2] >> 2) & 3] : 0;
+    if (!version || layer !== 1 || !kbps || !rate) {
+      i++;
+      continue;
+    }
+    const samples = version === 1 ? 1152 : 576;
+    const padding = (bytes[i + 2] >> 1) & 1;
+    const length = Math.floor(((samples / 8) * kbps * 1000) / rate) + padding;
+    seconds += samples / rate;
+    i += length;
+  }
+  return Math.round(seconds * 1000);
 }

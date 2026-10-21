@@ -7,6 +7,7 @@ import type { Character, Child, Page, Story, StoryRequest } from '../types.js';
 import { writeStory, type DraftPage, type StoryDraft } from './writer.js';
 import { illustrate, illustrationPrompt } from './illustrator.js';
 import { narrate } from './narrator.js';
+import { castVoices } from './voices.js';
 import { checkParentInput, checkStoryText, moderateImage } from './safety.js';
 import { CostMeter, metered } from './cost.js';
 import { withRetry } from './retry.js';
@@ -117,12 +118,16 @@ async function runBedrock(story: Story, child: Child, meter: CostMeter) {
   ];
   const seed = Math.floor(Math.random() * 2_000_000);
   // Narration doesn't depend on the pictures, so record it while the (rate-limited) painter works.
-  const narration = pool(allPages, 3, async (page) => {
-    const { audio, marks } = await withRetry(() => narrate(page.text));
-    page.audioUrl = await saveMedia(story.id, `${page.id}.mp3`, audio);
-    page.marks = marks;
-    tick(story);
-  });
+  // Characters' quoted lines get their own voices (one small casting call for the whole story).
+  const narration = castVoices(allPages, child).then((plan) =>
+    pool(allPages, 3, async (page) => {
+      page.voices = plan[page.id];
+      const { audio, marks } = await withRetry(() => narrate(page.text, page.voices));
+      page.audioUrl = await saveMedia(story.id, `${page.id}.mp3`, audio);
+      page.marks = marks;
+      tick(story);
+    }),
+  );
   // Awaited after painting; until then, an early failure must not become an unhandled rejection.
   narration.catch(() => {});
   // Image models have low on-demand rate limits: paint one page at a time, backing off when throttled.

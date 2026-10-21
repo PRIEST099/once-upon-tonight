@@ -34,6 +34,8 @@ export const config = {
   guardrailId: process.env.GUARDRAIL_ID,
   guardrailVersion: process.env.GUARDRAIL_VERSION ?? 'DRAFT',
   narratorVoice: process.env.NARRATOR_VOICE ?? 'Danielle',
+  /** Characters' quoted lines read in their own voices (CHARACTER_VOICES=false: the narrator reads everything). */
+  characterVoices: process.env.CHARACTER_VOICES !== 'false',
   narratorEngine: (process.env.NARRATOR_ENGINE ?? 'neural') as 'neural' | 'generative' | 'long-form' | 'standard',
 
   /**

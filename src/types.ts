@@ -53,6 +53,14 @@ export interface SpeechMark {
   value: string;
 }
 
+/** One stretch of a page read in one voice: the narrator, or a character's quoted line. */
+export interface VoiceLine {
+  start: number; // char offset in page text
+  end: number;
+  speaker: string; // "narrator" or a character's name
+  voice: string; // Polly voice id
+}
+
 export interface Page {
   id: string;
   text: string;
@@ -60,6 +68,8 @@ export interface Page {
   imageUrl?: string;
   audioUrl?: string;
   marks?: SpeechMark[];
+  /** Who reads which part of the page, when characters have their own voices. */
+  voices?: VoiceLine[];
 }
 
 export interface ChoiceOption {
