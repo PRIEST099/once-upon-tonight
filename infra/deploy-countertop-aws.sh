@@ -81,6 +81,7 @@ SANDBOX_PORT=5311
 AWS_REGION=$REGION
 PUBLIC_DEMO=true
 SANDBOX_ORIGIN=https://$SANDBOX
+PUBLIC_ORIGIN=https://$APP
 MCP_SERVER_URL=https://$MCP_DOMAIN/mcp
 ENV
 cat > /etc/systemd/system/countertop.service <<UNIT
