@@ -27,7 +27,7 @@ A couple of minutes later there's an original picture book starring Maya and her
 - It's painted page by page and narrated with **word-by-word read-along highlighting**, with each character's lines in their own voice.
 - The family **chooses what happens next**.
 - It ends on a calm wind-down page, then the screen dims for sleep.
-- Tomorrow's story remembers tonight's. In our demo, the swimming story opens *"just like the night before the dentist"*, calling back to the previous night's episode.
+- Tomorrow's story remembers tonight's. In our demo, the swimming story happens in the Pillow Fort and on Moonberry Hill from earlier episodes, and Maya uses the slow, brave breath she practised the night before the dentist.
 
 ## What it does
 
@@ -40,6 +40,7 @@ A couple of minutes later there's an original picture book starring Maya and her
 | 🧭 **Choose your path** | At the turning point, tap a picture or just say *"the pillow fort!"*, *"the second one"* or *"the other one"*. |
 | ✨ **Word of the night** | One slightly-new word per story. Tap it, or ask what it means. |
 | 🗺️ **A story world that remembers** | Sidekick, places, friends and past episodes carry over between nights. |
+| 👧👦 **Every child gets a world** | A brother or sister is added just by asking for their first story ("make tonight's story for Hadi, he's seven"): their own reading level, sidekick and voice. |
 | 🔈 **Voice-only too** | On devices without a screen, `read_mode: "voice"` reads the story aloud in short chunks ("Shall I keep going?") up to the choice. |
 | 🌙 **Sleep-friendly** | A dark UI, a slow last page, and the screen dims after "The End". |
 | 👪 **Parent-run and private** | The parent links the account and sets the hero's nickname, age, reading level, favourites and *never-mention* topics. They get a morning recap, and deleting a child's stories and memories takes one request plus a confirmation. |
