@@ -30,12 +30,19 @@ export const config = {
   imageModelId: process.env.IMAGE_MODEL_ID ?? 'stability.sd3-5-large-v1:0',
   imageRegion: process.env.IMAGE_REGION ?? 'us-west-2',
   /** Fast model that applies the bedtime-suitability rubric to requests and pages. */
+  /** Looks at each illustration next to its page (Sonnet: it spots a fox-eared child that Haiku misses). */
+  pictureReviewModelId: process.env.PICTURE_REVIEW_MODEL_ID ?? process.env.TEXT_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6',
   reviewModelId: process.env.REVIEW_MODEL_ID ?? 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
   guardrailId: process.env.GUARDRAIL_ID,
   guardrailVersion: process.env.GUARDRAIL_VERSION ?? 'DRAFT',
   narratorVoice: process.env.NARRATOR_VOICE ?? 'Danielle',
   /** Characters' quoted lines read in their own voices (CHARACTER_VOICES=false: the narrator reads everything). */
   characterVoices: process.env.CHARACTER_VOICES !== 'false',
+  /** Bedtime pace: a little slower than Polly's default, with pauses between sentences and speakers. */
+  narrationRate: process.env.NARRATION_RATE ?? '80%',
+  sentencePauseMs: Number(process.env.SENTENCE_PAUSE_MS ?? 500),
+  speakerPauseMs: Number(process.env.SPEAKER_PAUSE_MS ?? 550),
+  pagePauseMs: Number(process.env.PAGE_PAUSE_MS ?? 800),
   narratorEngine: (process.env.NARRATOR_ENGINE ?? 'neural') as 'neural' | 'generative' | 'long-form' | 'standard',
 
   /**

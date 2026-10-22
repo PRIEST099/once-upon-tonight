@@ -98,6 +98,7 @@ async function playClip(url: string | undefined, spans: HTMLElement[] = [], mark
     let idx = -1;
     for (let i = 0; i < marks.length; i++) if (marks[i].time <= t) idx = i; else break;
     spans.forEach((s, i) => { s.classList.toggle('now', i === idx); s.classList.toggle('said', i < idx); });
+    showPassage(spans[Math.max(idx, 0)]?.parentElement);
     raf = requestAnimationFrame(tick);
   };
   try {
@@ -108,6 +109,34 @@ async function playClip(url: string | undefined, spans: HTMLElement[] = [], mark
   } catch {
     return false; // autoplay blocked → caller shows a tap-to-start button
   }
+}
+
+/**
+ * A long page is shown a passage at a time (a few sentences, cut at sentence ends), and the read-along
+ * moves to the next passage when the narrator gets there, so the words never cover the whole picture.
+ */
+function passagesOf(text: string, maxWords = 45): [number, number][] {
+  const out: [number, number][] = [];
+  const re = /[^.!?…]+(?:[.!?…]+["”’')]*|$)\s*/g;
+  let start = 0;
+  let words = 0;
+  for (let m; (m = re.exec(text)) && m[0]; ) {
+    const n = m[0].split(/\s+/).filter(Boolean).length;
+    if (words && words + n > maxWords) {
+      out.push([start, m.index]);
+      start = m.index;
+      words = 0;
+    }
+    words += n;
+  }
+  out.push([start, text.length]);
+  return out;
+}
+
+function showPassage(box: Element | null | undefined) {
+  if (!box?.classList.contains('passage') || box.classList.contains('on')) return;
+  box.parentElement?.querySelectorAll('.passage.on').forEach((b) => b.classList.remove('on'));
+  box.classList.add('on');
 }
 
 /** Wrap each spoken word in a span (using Polly's char offsets) and mark the word of the night. */
@@ -122,8 +151,13 @@ function renderWords(el: HTMLElement, page: Page, wotn?: string) {
     el.textContent = text;
     return spans;
   }
+  const parts = passagesOf(text);
+  const boxes = parts.map(() => el.appendChild(Object.assign(document.createElement('span'), { className: 'passage' })));
+  const boxAt = (i: number) => boxes[Math.max(0, parts.findIndex(([s, e]) => i >= s && i < e))];
+  const appendText = (a: number, b: number) =>
+    parts.forEach(([s, e], k) => { if (Math.min(b, e) > Math.max(a, s)) boxes[k].append(text.slice(Math.max(a, s), Math.min(b, e))); });
   for (const m of marks) {
-    if (m.start > cursor) el.append(text.slice(cursor, m.start));
+    if (m.start > cursor) appendText(cursor, m.start);
     const word = text.slice(m.start, m.end);
     const span = document.createElement(isWotn(word) ? 'button' : 'span');
     span.className = 'w' + (isWotn(word) ? ' wotn' : '');
@@ -132,11 +166,13 @@ function renderWords(el: HTMLElement, page: Page, wotn?: string) {
       span.setAttribute('aria-label', `Word of the night: ${word}. Tap to hear what it means.`);
       span.addEventListener('click', (e) => { e.stopPropagation(); showWord(); });
     }
-    el.append(span);
+    boxAt(m.start).append(span);
     spans.push(span);
     cursor = m.end;
   }
-  el.append(text.slice(cursor));
+  appendText(cursor, text.length);
+  if (boxes.length > 1) el.classList.add('paged');
+  boxes[0].classList.add('on');
   return spans;
 }
 
@@ -261,7 +297,7 @@ function goTo(p: number, report = true, narrateDelay = 0) {
     const playBtn = stage.querySelector<HTMLButtonElement>('.play')!;
     const narrate = async () => {
       const ok = await playClip(step.page.audioUrl, spans, step.page.marks, () => {
-        if (playing && pos === p) setTimeout(() => pos === p && playing && goTo(p + 1), 1300);
+        if (playing && pos === p) setTimeout(() => pos === p && playing && goTo(p + 1, true, 600), 1300);
       });
       if (!ok) showTapToStart(narrate);
     };
@@ -341,7 +377,7 @@ let poll = 0;
 const STUDIO_STEPS = [
   { key: 'writing', ico: '✍️', label: 'Writing the story', sub: 'Amazon Bedrock · Claude' },
   { key: 'checking', ico: '🛡️', label: 'Bedtime safety check', sub: 'Guardrails + Claude review' },
-  { key: 'illustrating', ico: '🎨', label: 'Painting the pictures', sub: 'Bedrock · SD3.5 Large + Rekognition check' },
+  { key: 'illustrating', ico: '🎨', label: 'Painting the pictures', sub: 'SD3.5 Large · Rekognition + Claude picture check' },
   { key: 'narrating', ico: '🎙️', label: 'Recording the narration', sub: 'Amazon Polly' },
   { key: 'ready', ico: '🌙', label: 'Ready for bedtime', sub: 'Remembered for next time' },
 ];

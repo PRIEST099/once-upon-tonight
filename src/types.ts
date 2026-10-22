@@ -12,6 +12,8 @@ export interface Episode {
   title: string;
   summary: string;
   choiceMade?: string;
+  /** Both options offered at the choice, so later stories don't offer them again. */
+  choiceOptions?: string[];
   wordOfTheNight?: string;
 }
 
@@ -130,6 +132,10 @@ export interface Story {
     imagesReplaced?: number;
     /** Pictures kept without a Rekognition verdict because the check was unavailable. */
     imagesUnchecked?: number;
+    /** Pictures Claude compared with their page (characters present and separate, right animals, time of day). */
+    picturesReviewed?: number;
+    /** Repaints after that review found a picture didn't match its page. */
+    picturesRepainted?: number;
   };
   /** Estimated AWS spend for this story at list prices (see src/story/cost.ts). */
   cost?: { usd: number; items: { label: string; qty: number; usd: number }[] };

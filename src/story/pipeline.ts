@@ -5,7 +5,7 @@ import * as store from '../store.js';
 import { saveMedia, mediaDir, mediaUrl } from '../media.js';
 import type { Character, Child, Page, Story, StoryRequest } from '../types.js';
 import { writeStory, type DraftPage, type StoryDraft } from './writer.js';
-import { illustrate, illustrationPrompt } from './illustrator.js';
+import { castIn, illustrate, illustrationPrompt, reviewPicture, type PictureReview } from './illustrator.js';
 import { narrate } from './narrator.js';
 import { castVoices } from './voices.js';
 import { checkParentInput, checkStoryText, moderateImage } from './safety.js';
@@ -110,7 +110,7 @@ async function runBedrock(story: Story, child: Child, meter: CostMeter) {
   const narrationItems = allPages.length + 2; // + choice question + word of the night
   story.progress.total = 2 + allPages.length + narrationItems + 1;
   story.progress.done = 2;
-  const checks = (story.safety = { checked: true, provider: safety.provider, imagesChecked: 0, imagesRegenerated: 0, imagesReplaced: 0, imagesUnchecked: 0 });
+  const checks = (story.safety = { checked: true, provider: safety.provider, imagesChecked: 0, imagesRegenerated: 0, imagesReplaced: 0, imagesUnchecked: 0, picturesReviewed: 0, picturesRepainted: 0 });
   tick(story);
 
   update(story, { status: 'illustrating' }, `Painting ${allPages.length} illustrations`);
@@ -136,9 +136,10 @@ async function runBedrock(story: Story, child: Child, meter: CostMeter) {
   narration.catch(() => {});
   // Image models have low on-demand rate limits: paint one page at a time, backing off when throttled.
   await pool(allPages, 1, async (page, i) => {
-    const prompt = illustrationPrompt(page.illustrationPrompt, sceneCast(page), cast);
+    const paint = (fix?: string) => illustrationPrompt(page.illustrationPrompt, sceneCast(page), cast, fix);
+    const review = (image: Uint8Array) => reviewPicture(image, { text: page.text }, castIn(sceneCast(page), cast), cast[0]);
     try {
-      page.imageUrl = await saveMedia(story.id, `${page.id}.jpg`, await paintChecked(prompt, seed, checks));
+      page.imageUrl = await saveMedia(story.id, `${page.id}.jpg`, await paintReviewed(paint, review, seed, checks));
     } catch (err) {
       // Never lose the whole story over one picture: reuse the previous page's illustration.
       console.warn(`[pipeline] illustration ${i} failed or was flagged; reusing the previous picture`, err);
@@ -165,6 +166,51 @@ async function runBedrock(story: Story, child: Child, meter: CostMeter) {
 
 /** Repaints (each with a fresh seed) allowed after Rekognition flags an illustration. */
 const MAX_REPAINTS = 2;
+/** Repaints allowed per page, and per story, when the picture review finds a serious problem. */
+const MAX_REVIEW_REPAINTS = 2;
+const MAX_STORY_REPAINTS = 4;
+
+type Checks = NonNullable<Story['safety']>;
+
+/**
+ * Paint a page, then have Claude look at it next to the page text (see reviewPicture). A serious problem
+ * (a child merged with their animal friend, a character drawn twice) gets a repaint with a new seed and the
+ * reviewer's correction at the front of the prompt; a minor one is kept. When the repaints run out, the best
+ * attempt is kept. If the review itself fails, the picture is kept.
+ */
+async function paintReviewed(
+  paint: (fix?: string) => string,
+  review: (image: Uint8Array) => Promise<PictureReview>,
+  seed: number,
+  checks: Checks,
+) {
+  let best: { image: Uint8Array; score: number } | undefined;
+  let fix: string | undefined;
+  for (let attempt = 0; ; attempt++) {
+    const image = await paintChecked(paint(fix), attempt ? Math.floor(Math.random() * 2_000_000) : seed, checks);
+    let verdict: PictureReview;
+    try {
+      verdict = await withRetry(() => review(image));
+    } catch (err) {
+      console.warn('[pipeline] picture review unavailable; keeping the illustration', err);
+      return best?.image ?? image;
+    }
+    checks.picturesReviewed = (checks.picturesReviewed ?? 0) + 1;
+    const score = verdict.severity * 100 + verdict.problems.length;
+    if (!best || score < best.score) best = { image, score };
+    if (verdict.severity < 2) {
+      if (verdict.severity) console.warn(`[pipeline] picture kept with a small difference (${verdict.problems.join('; ')})`);
+      return best.image;
+    }
+    if (attempt >= MAX_REVIEW_REPAINTS || (checks.picturesRepainted ?? 0) >= MAX_STORY_REPAINTS) {
+      console.warn(`[pipeline] picture still off (${verdict.problems.join('; ')}); no repaints left, keeping the best try`);
+      return best.image;
+    }
+    console.warn(`[pipeline] picture doesn't match its page (${verdict.problems.join('; ')}); repainting`);
+    checks.picturesRepainted = (checks.picturesRepainted ?? 0) + 1;
+    fix = verdict.fix;
+  }
+}
 
 /**
  * Paint one page, then let Amazon Rekognition look at the actual pixels before we keep them. A
@@ -172,7 +218,7 @@ const MAX_REPAINTS = 2;
  * the caller reuses the previous page's picture. If the check itself is unavailable, the picture is
  * kept and counted as unchecked (it has still passed the image model's built-in filter).
  */
-async function paintChecked(prompt: string, seed: number, checks: { imagesChecked: number; imagesRegenerated: number; imagesUnchecked?: number }) {
+async function paintChecked(prompt: string, seed: number, checks: Checks) {
   for (let attempt = 0; ; attempt++) {
     const image = await withRetry(() => illustrate(prompt, attempt ? Math.floor(Math.random() * 2_000_000) : seed));
     let verdict: Awaited<ReturnType<typeof moderateImage>>;
@@ -185,11 +231,11 @@ async function paintChecked(prompt: string, seed: number, checks: { imagesChecke
       checks.imagesUnchecked = (checks.imagesUnchecked ?? 0) + 1;
       return image;
     }
-    checks.imagesChecked++;
+    checks.imagesChecked = (checks.imagesChecked ?? 0) + 1;
     if (verdict.ok) return image;
     if (attempt >= MAX_REPAINTS) throw new Error(`Rekognition flagged the picture ${attempt + 1} times (${verdict.labels.join(', ')})`);
     console.warn(`[pipeline] Rekognition flagged an illustration (${verdict.labels.join(', ')}); repainting with a new seed`);
-    checks.imagesRegenerated++;
+    checks.imagesRegenerated = (checks.imagesRegenerated ?? 0) + 1;
   }
 }
 
@@ -235,6 +281,7 @@ function remember(child: Child, story: Story) {
     title: story.title ?? 'Untitled',
     summary: story.episodeSummary ?? '',
     wordOfTheNight: story.wordOfTheNight?.word,
+    choiceOptions: story.choice?.options.map((o) => o.label),
   });
   store.updateChild(fresh);
 }

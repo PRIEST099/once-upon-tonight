@@ -133,6 +133,9 @@ body.inline .frame { height: auto; aspect-ratio: 16 / 10; border-radius: var(--r
   color: #fffaf0; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
   text-wrap: pretty;
 }
+.page-text.paged .passage { display: none; }
+.page-text.paged .passage.on { display: inline; animation: passage-in 0.6s ease; }
+@keyframes passage-in { from { opacity: 0; } to { opacity: 1; } }
 .page-text .w { transition: color 0.15s ease, text-shadow 0.15s ease; border-radius: 6px; }
 .page-text .w.said { color: #fff3d6; }
 .page-text .w.now { color: var(--gold); text-shadow: 0 0 calc(14 * var(--u)) rgba(255, 207, 110, 0.85); }

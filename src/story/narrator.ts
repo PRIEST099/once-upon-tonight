@@ -4,10 +4,11 @@ import { PRICES, record } from './cost.js';
 import { config } from '../config.js';
 import type { SpeechMark, VoiceLine } from '../types.js';
 
-async function synth(text: string, format: 'mp3' | 'json', engine: string, voice = config.narratorVoice) {
+async function synth(text: string, format: 'mp3' | 'json', engine: string, voice = config.narratorVoice, ssml?: string) {
   const res = await polly.send(
     new SynthesizeSpeechCommand({
-      Text: text,
+      Text: ssml ?? text,
+      ...(ssml && { TextType: 'ssml' }),
       VoiceId: voice as VoiceId,
       Engine: engine as Engine,
       OutputFormat: format,
@@ -15,23 +16,42 @@ async function synth(text: string, format: 'mp3' | 'json', engine: string, voice
       ...(format === 'mp3' && { SampleRate: '24000' }),
     }),
   );
-  record(PRICES.polly[engine] ?? PRICES.polly.neural, text.length);
+  record(PRICES.polly[engine] ?? PRICES.polly.neural, text.length); // SSML tags aren't billed
   return new Uint8Array(await res.AudioStream!.transformToByteArray());
 }
 
-/** Polly reports byte offsets into the UTF-8 input; convert them to string (UTF-16) indexes. */
-function byteToCharIndex(text: string) {
-  const map: number[] = [];
-  let byte = 0;
+const utf8Length = (s: string) => new TextEncoder().encode(s).length;
+const ESCAPE: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
+
+/**
+ * Bedtime pace: the text as SSML, read a little slower than Polly's default, with a pause after each
+ * sentence and silence at the end. Speech marks come back as byte offsets into the SSML, so this also
+ * returns a map from those offsets to indexes in the plain text (tags map to nothing).
+ */
+function bedtimeSsml(text: string, endPauseMs: number) {
+  const open = `<speak><prosody rate="${config.narrationRate}">`;
+  const pause = `<break time="${config.sentencePauseMs}ms"/>`;
+  let ssml = open;
+  let byte = utf8Length(open);
+  const toChar: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const cp = text.codePointAt(i)!;
-    const len = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
-    for (let k = 0; k < len; k++) map[byte + k] = i;
+    const ch = String.fromCodePoint(cp);
+    // A pause between sentences: at the first space after . ! ? or … (and any closing quote).
+    if (/\s/.test(ch) && /[.!?…]["”’')]*$/.test(text.slice(0, i)) && !/\s/.test(text[i - 1])) {
+      ssml += pause;
+      byte += pause.length;
+    }
+    const out = ESCAPE[ch] ?? ch;
+    const len = utf8Length(out);
+    for (let k = 0; k < len; k++) toChar[byte + k] = i;
+    ssml += out;
     byte += len;
     if (cp > 0xffff) i++;
   }
-  map[byte] = text.length;
-  return (b: number) => map[b] ?? text.length;
+  toChar[byte] = text.length;
+  ssml += `${endPauseMs ? `<break time="${endPauseMs}ms"/>` : ''}</prosody></speak>`;
+  return { ssml, toChar: (b: number) => toChar[b] };
 }
 
 /**
@@ -46,26 +66,30 @@ export async function narrate(text: string, lines?: VoiceLine[]): Promise<{ audi
       console.warn('[narrator] character voices failed; narrator only', err);
     }
   }
-  return narrateOne(text, config.narratorVoice);
+  return narrateOne(text, config.narratorVoice, config.pagePauseMs);
 }
 
-async function narrateOne(text: string, voice: string): Promise<{ audio: Uint8Array; marks: SpeechMark[] }> {
-  const audio = await synth(text, 'mp3', config.narratorEngine, voice);
+async function narrateOne(text: string, voice: string, endPauseMs: number): Promise<{ audio: Uint8Array; marks: SpeechMark[] }> {
+  const { ssml, toChar } = bedtimeSsml(text, endPauseMs);
+  const audio = await synth(text, 'mp3', config.narratorEngine, voice, ssml);
   let raw: Uint8Array;
   try {
-    raw = await synth(text, 'json', config.narratorEngine, voice);
+    raw = await synth(text, 'json', config.narratorEngine, voice, ssml);
   } catch {
     // Some engines don't return speech marks; fall back to the neural engine for timings.
-    raw = await synth(text, 'json', 'neural', voice);
+    raw = await synth(text, 'json', 'neural', voice, ssml);
   }
-  const toChar = byteToCharIndex(text);
   const marks = new TextDecoder()
     .decode(raw)
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line))
-    .filter((m) => m.type === 'word')
-    .map((m) => ({ time: m.time, start: toChar(m.start), end: toChar(m.end), value: m.value }));
+    .filter((m) => m.type === 'word' && toChar(m.start) !== undefined && toChar(m.start) < text.length) // a <break> gets a mark of its own
+    .map((m) => {
+      const start = toChar(m.start);
+      const end = toChar(m.end) ?? toChar(m.end - 1) + 1;
+      return { time: m.time, start, end, value: text.slice(start, end) };
+    });
   return { audio, marks };
 }
 
@@ -75,7 +99,10 @@ async function narrateOne(text: string, voice: string): Promise<{ audio: Uint8Ar
  */
 async function narrateLines(text: string, lines: VoiceLine[]) {
   const spoken = lines.filter((l) => /[\p{L}\p{N}]/u.test(text.slice(l.start, l.end))); // skip bare punctuation
-  const parts = await Promise.all(spoken.map((l) => narrateOne(text.slice(l.start, l.end).trim(), l.voice)));
+  // A breath when the speaker changes, and a longer one at the end of the page.
+  const parts = await Promise.all(
+    spoken.map((l, i) => narrateOne(text.slice(l.start, l.end).trim(), l.voice, i === spoken.length - 1 ? config.pagePauseMs : config.speakerPauseMs)),
+  );
   const marks: SpeechMark[] = [];
   let ms = 0;
   parts.forEach((p, i) => {

@@ -2,7 +2,7 @@
 # Mixed hosted demo: Maya's stories stay pre-made (free), and a hero a visitor adds gets a real story made with
 # the paid models (Claude Sonnet writes, Guardrails + Claude Haiku check, SD3.5 paints, Rekognition checks,
 # Polly narrates), within a shared quota: LIVE_STORIES_PER_DAY (all visitors, rolling 24 h) and
-# LIVE_STORIES_TOTAL (ever). At about $0.64 a story, the defaults (3 a day, 10 in all) cap the spend near $6.40.
+# LIVE_STORIES_TOTAL (ever). At $0.75 to $1.05 a story (repaints included), the defaults (3 a day, 10 in all) cap the spend near $10.
 # Usage: infra/enable-live-demo.sh   (after infra/deploy-aws.sh; GUARDRAIL_ID comes from .env)
 set -euo pipefail
 REGION=${AWS_REGION:-us-east-1}

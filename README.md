@@ -33,11 +33,11 @@ A couple of minutes later there's an original picture book starring Maya and her
 
 | | |
 |---|---|
-| ✍️ **Today → tonight's story** | The parent's own words become a gentle, original story at the child's reading level. Worries get a concrete coping idea (a slow breath, asking for help) and are never dismissed. |
-| 🎨 **Illustrated every page** | A consistent watercolor style. Characters are described by appearance (never by name), so the same hero and sidekick show up on every page. Every picture is moderated by Amazon Rekognition before it's kept. |
-| 🎙️ **Narrated read-along** | Amazon Polly narration with word timings. The current word lights up as it's read. |
+| ✍️ **Today → tonight's story** | The parent's own words become a gentle, original story at the child's reading level. Worries get a concrete coping idea (a slow breath, asking for help) and are never dismissed. Every night is a different kind of adventure (baking, building, painting, a puppet show), with a mixed cast of people and creatures who talk, and long, unhurried pages. |
+| 🎨 **Illustrated every page** | A consistent watercolor style. Characters are described by appearance (never by name), so the same hero and sidekick show up on every page. Every picture is moderated by Amazon Rekognition, then Claude looks at it next to its page and has it repainted if a character is missing, drawn twice, or merged with their animal friend (image models love a fox-eared child). |
+| 🎙️ **Narrated read-along** | Amazon Polly narration with word timings, read at a bedtime pace (SSML: slower speech, a pause after each sentence and between speakers). The current word lights up as it's read, and a long page is shown a few sentences at a time. |
 | 🎭 **Character voices** | The narrator reads the story, and each character speaks in their own voice (Maya: Ivy, Pip: Kevin, grown-ups get adult voices). Quotes are found by code; Claude Haiku says who speaks each one. If a page doesn't line up, the narrator reads it. |
-| 🧭 **Choose your path** | At the turning point, tap a picture or just say *"the pillow fort!"*, *"the second one"* or *"the other one"*. |
+| 🧭 **Choose your path** | At the turning point, tap a picture or just say *"bake the cake!"*, *"the second one"* or *"the other one"*. The two options are things to do that come out of tonight's plot, and the story remembers past choices so they aren't offered again. |
 | ✨ **Word of the night** | One slightly-new word per story. Tap it, or ask what it means. |
 | 🗺️ **A story world that remembers** | Sidekick, places, friends and past episodes carry over between nights. |
 | 👧👦 **Every child gets a world** | A brother or sister is added just by asking for their first story ("make tonight's story for Hadi, he's seven"): their own reading level, sidekick and voice. |
@@ -103,7 +103,7 @@ flowchart LR
   G1 --> W["Amazon Bedrock · Claude Sonnet 4.6<br/>write a branching story (forced tool call)"]
   W --> G2["Guardrails + bedtime review (Claude Haiku)<br/>check every page; rewrite gentler if flagged"]
   G2 --> I["Bedrock · Stability SD3.5 Large<br/>paint every page"]
-  I --> R["Amazon Rekognition<br/>moderate every picture"]
+  I --> R["Amazon Rekognition + Claude Sonnet (vision)<br/>moderate every picture, check it matches its page"]
   G2 --> N["Amazon Polly (neural)<br/>narration + word speech marks"]
   R & N --> M["Story world memory + cost record"]
 ```
@@ -117,11 +117,12 @@ flowchart LR
 | **Amazon Bedrock**: Converse, Claude Haiku 4.5 | Bedtime-suitability review against an explicit rubric. Chosen over Guardrails denied topics after measuring them on 120 dev cases, then verified on 64 held-out cases. | [`src/story/safety.ts`](src/story/safety.ts), [`eval/safety`](eval/safety/README.md) |
 | **Amazon Bedrock**: InvokeModel, Stability SD3.5 Large (us-west-2) | One watercolor per page, painted one at a time with backoff (rate limits) | [`src/story/illustrator.ts`](src/story/illustrator.ts) |
 | **Amazon Rekognition**: `DetectModerationLabels` | Moderates every illustration before it's kept (repaint, then fall back to the previous picture) | [`src/story/safety.ts`](src/story/safety.ts), [`src/story/pipeline.ts`](src/story/pipeline.ts) |
-| **Amazon Polly**: neural `Danielle` + word speech marks | Narration and read-along timings (UTF-8 byte → character offset mapping); character lines in other neural voices, joined with timings shifted by each line's length | [`src/story/narrator.ts`](src/story/narrator.ts), [`src/story/voices.ts`](src/story/voices.ts) |
+| **Amazon Bedrock**: Converse with an image, Claude Sonnet 4.6 | Picture check: answers a fixed checklist about each illustration (a person with animal parts, two characters sharing a body, someone drawn twice or missing, the wrong animal, writing). A serious answer means a repaint with the reviewer's correction, up to 2 per page and 4 per story; otherwise the best try is kept | [`src/story/illustrator.ts`](src/story/illustrator.ts), [`src/story/pipeline.ts`](src/story/pipeline.ts) |
+| **Amazon Polly**: neural `Danielle` + word speech marks | Narration at a bedtime pace via SSML (`prosody rate`, `break`) and read-along timings (SSML byte offset → text character mapping); character lines in other neural voices, joined with timings shifted by each line's length | [`src/story/narrator.ts`](src/story/narrator.ts), [`src/story/voices.ts`](src/story/voices.ts) |
 | **Amazon EC2 + Amazon CloudFront** | The hosted demo: a t4g.nano instance reachable only from CloudFront, with HTTPS at the edge. Managed via SSM, no SSH. | [`infra/deploy-aws.sh`](infra/deploy-aws.sh) |
 | **Amazon Bedrock** (Claude Haiku 4.5) + **Amazon Polly** | The simulated Alexa+ brain and voice in Countertop | [countertop](https://github.com/PRIEST099/countertop) |
 
-Each story stores an itemized cost estimate at list prices ([`src/story/cost.ts`](src/story/cost.ts)). A 6-page story is roughly **$0.65**, mostly the illustrations.
+Each story stores an itemized cost estimate at list prices ([`src/story/cost.ts`](src/story/cost.ts)). A 6-page story is roughly **$0.75 to $1.05**, mostly the illustrations (more when the picture check asks for repaints).
 
 ## Try the hosted demo
 
