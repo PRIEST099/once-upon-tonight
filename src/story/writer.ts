@@ -99,13 +99,15 @@ const levelGuide: Record<Child['readingLevel'], string> = {
   'independent-reader': '6–8 sentences per page (100–130 words), richer vocabulary and plenty of dialogue.',
 };
 
+/** A new word every night: the series is also a small vocabulary builder. */
+const wordsUsed = (child: Child) => [...new Set(child.world.episodes.map((e) => e.wordOfTheNight?.toLowerCase()).filter(Boolean) as string[])].slice(-30);
+
 export function buildAuthorPrompt(child: Child, req: StoryRequest) {
   const shared = req.length === 'short' ? 2 : 3;
   const branch = req.length === 'short' ? 2 : 3;
   const w = child.world;
   const recent = w.episodes.slice(-3);
-  // A new word every night: the series is also a small vocabulary builder.
-  const usedWords = [...new Set(w.episodes.map((e) => e.wordOfTheNight).filter(Boolean))].slice(-30);
+  const usedWords = wordsUsed(child);
   // Earlier choices and adventures, so tonight doesn't retell them.
   const pastChoices = [...new Set(w.episodes.flatMap((e) => e.choiceOptions ?? (e.choiceMade ? [e.choiceMade] : [])))].slice(-12);
 
@@ -124,7 +126,7 @@ Rules:
 - Let the characters talk: most pages have at least one short spoken line in quotation marks, and say who says it (each character is read aloud in their own voice). Keep each line under 20 words.
 - Bedtime pace: unhurried, with soft sounds, textures and smells. Each path's last page is a long wind-down: everything grows quiet, warm and sleepy, slower sentences, ending by saying goodnight to ${child.name} by name.
 - Write only the story itself. Never talk about the writing, the rules or word choices, and never correct yourself in the text.
-- Use the word of the night verbatim exactly once in the shared pages.${usedWords.length ? ` Pick a new word: not ${usedWords.map((x) => `"${x}"`).join(', ')}.` : ''}
+- Use the word of the night verbatim exactly once in the shared pages.${usedWords.length ? ` It must be a word ${child.name} hasn't had before. Already used, so never the word of the night: ${usedWords.map((x) => `"${x}"`).join(', ')}.` : ''}
 - Continuity: this is one episode in an ongoing series. ${recent.length ? 'Briefly and naturally call back to one earlier episode.' : 'This is the first episode.'}
 Return the story only by calling the write_story tool.`;
 
@@ -154,9 +156,16 @@ function unstring<T>(v: T | string): T {
   }
 }
 
-/** A malformed draft gets one more try; a throttled one waits and tries again. */
-export function writeStory(child: Child, req: StoryRequest): Promise<StoryDraft> {
-  return withRetry(() => writeOnce(child, req));
+/**
+ * A malformed draft gets one more try; a throttled one waits and tries again. A draft that repeats an earlier
+ * word of the night is written once more with that word ruled out (the second draft is kept either way).
+ */
+export async function writeStory(child: Child, req: StoryRequest): Promise<StoryDraft> {
+  const draft = await withRetry(() => writeOnce(child, req));
+  const word = draft.wordOfTheNight?.word?.toLowerCase();
+  if (!word || !wordsUsed(child).includes(word)) return draft;
+  console.warn(`[writer] "${word}" was an earlier word of the night; writing again`);
+  return withRetry(() => writeOnce(child, { ...req, todaysMoments: `${req.todaysMoments}\n(The word of the night must not be "${word}": ${child.name} has had it before.)` }));
 }
 
 async function writeOnce(child: Child, req: StoryRequest): Promise<StoryDraft> {

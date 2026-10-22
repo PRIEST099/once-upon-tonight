@@ -21,6 +21,8 @@ async function synth(text: string, format: 'mp3' | 'json', engine: string, voice
 }
 
 const utf8Length = (s: string) => new TextEncoder().encode(s).length;
+/** "Mr." and friends end in a full stop but not a sentence: no pause between "Mr." and "Cello". */
+const TITLE = /\b(?:Mr|Mrs|Ms|Dr|St|Mt)\.$/;
 const ESCAPE: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
 
 /**
@@ -38,7 +40,7 @@ function bedtimeSsml(text: string, endPauseMs: number) {
     const cp = text.codePointAt(i)!;
     const ch = String.fromCodePoint(cp);
     // A pause between sentences: at the first space after . ! ? or … (and any closing quote).
-    if (/\s/.test(ch) && /[.!?…]["”’')]*$/.test(text.slice(0, i)) && !/\s/.test(text[i - 1])) {
+    if (/\s/.test(ch) && /[.!?…]["”’')]*$/.test(text.slice(0, i)) && !/\s/.test(text[i - 1]) && !TITLE.test(text.slice(0, i))) {
       ssml += pause;
       byte += pause.length;
     }

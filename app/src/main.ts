@@ -116,18 +116,24 @@ async function playClip(url: string | undefined, spans: HTMLElement[] = [], mark
  * moves to the next passage when the narrator gets there, so the words never cover the whole picture.
  */
 function passagesOf(text: string, maxWords = 45): [number, number][] {
+  // Sentence ends: . ! ? or … (and any closing quote) before a space, except after "Mr." and friends.
+  const ends: number[] = [];
+  const re = /[.!?…]+["”’')]*\s+/g;
+  for (let m; (m = re.exec(text)); ) if (!/\b(?:Mr|Mrs|Ms|Dr|St|Mt)\.$/.test(text.slice(0, m.index + 1))) ends.push(m.index + m[0].length);
+  ends.push(text.length);
   const out: [number, number][] = [];
-  const re = /[^.!?…]+(?:[.!?…]+["”’')]*|$)\s*/g;
   let start = 0;
+  let prev = 0;
   let words = 0;
-  for (let m; (m = re.exec(text)) && m[0]; ) {
-    const n = m[0].split(/\s+/).filter(Boolean).length;
+  for (const end of ends) {
+    const n = text.slice(prev, end).split(/\s+/).filter(Boolean).length;
     if (words && words + n > maxWords) {
-      out.push([start, m.index]);
-      start = m.index;
+      out.push([start, prev]);
+      start = prev;
       words = 0;
     }
     words += n;
+    prev = end;
   }
   out.push([start, text.length]);
   return out;
