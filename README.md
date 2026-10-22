@@ -23,11 +23,11 @@ Bedtime is when kids bring up their day: the first swimming lesson, the wobbly t
 
 > *"Alexa, make a short story for tonight. Maya had her first swimming lesson today. She was scared to put her face in the water, but she did it! Lesson two is tomorrow."*
 
-A couple of minutes later there's an original picture book starring Maya and her sidekick Pip the baby dragon.
-- It's painted page by page and narrated with **word-by-word read-along highlighting**, with each character's lines in their own voice.
-- The family **chooses what happens next**.
+A few minutes later there's an original picture book starring Maya and her sidekick Pip the baby dragon.
+- It's painted page by page, every picture checked against its page, and narrated at a bedtime pace with **word-by-word read-along highlighting**, with each character's lines in their own voice.
+- The family **chooses what happens next**: in the demo, paint the Moon a picture of the brave dive, or grow the Moon a little strawberry plant.
 - It ends on a calm wind-down page, then the screen dims for sleep.
-- Tomorrow's story remembers tonight's. In our demo, the swimming story happens in the Pillow Fort and on Moonberry Hill from earlier episodes, and Maya uses the slow, brave breath she practised the night before the dentist.
+- Tomorrow's story remembers tonight's. In our demo, Maya uses the slow, brave breath she practised the night before the dentist, and Mr. Cello, the neighbour from that story, drops by with a strawberry plant.
 
 ## What it does
 
