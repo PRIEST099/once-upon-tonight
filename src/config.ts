@@ -39,10 +39,10 @@ export const config = {
   /** Characters' quoted lines read in their own voices (CHARACTER_VOICES=false: the narrator reads everything). */
   characterVoices: process.env.CHARACTER_VOICES !== 'false',
   /** Bedtime pace: a little slower than Polly's default, with pauses between sentences and speakers. */
-  narrationRate: process.env.NARRATION_RATE ?? '80%',
-  sentencePauseMs: Number(process.env.SENTENCE_PAUSE_MS ?? 500),
+  narrationRate: process.env.NARRATION_RATE ?? '88%',
+  sentencePauseMs: Number(process.env.SENTENCE_PAUSE_MS ?? 400),
   speakerPauseMs: Number(process.env.SPEAKER_PAUSE_MS ?? 550),
-  pagePauseMs: Number(process.env.PAGE_PAUSE_MS ?? 800),
+  pagePauseMs: Number(process.env.PAGE_PAUSE_MS ?? 700),
   narratorEngine: (process.env.NARRATOR_ENGINE ?? 'neural') as 'neural' | 'generative' | 'long-form' | 'standard',
 
   /**
