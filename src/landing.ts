@@ -29,7 +29,7 @@ export function landingPage(opts: { atEndpoint?: boolean } = {}) {
 <h1>🌙 Once Upon Tonight</h1>
 <p>An Alexa+ add-on, built as an MCP server, that turns a child's day into tonight's illustrated, narrated, choose-your-path bedtime story, and remembers the story world for tomorrow night.</p>
 ${note}
-<p><a href="${TRY_IT}"><b>Try it in your browser</b></a> · <a href="https://youtu.be/Lgh42f-NPUk">Watch the 3-minute demo</a> · <a href="https://github.com/PRIEST099/once-upon-tonight">Code</a> · <a href="https://github.com/PRIEST099/countertop">Countertop simulator</a></p>
+<p><a href="${TRY_IT}"><b>Try it in your browser</b></a> · <a href="https://youtu.be/9wnNlLf7Hhw">Watch the 3-minute demo</a> · <a href="https://github.com/PRIEST099/once-upon-tonight">Code</a> · <a href="https://github.com/PRIEST099/countertop">Countertop simulator</a></p>
 
 <h2>MCP endpoint</h2>
 <p><code>${endpoint}</code> (Streamable HTTP, spec 2025-11-25, OAuth 2.1 with PKCE S256)</p>
